@@ -1,0 +1,119 @@
+<deployment-project plugin="plugin.ezdeploy" plugin-version="1.0">
+  <configuration build-checksum="670684907" file="E:\Diss_workfolder\Software\Skripten, Plugins\Eigene\MATLAB\DetIntensitiesofAtomColumns\GUI\Seek and Integrate.prj" location="E:\Diss_workfolder\Software\Skripten, Plugins\Eigene\MATLAB\DetIntensitiesofAtomColumns\GUI" name="Seek and Integrate" preferred-package-location="E:\Diss_workfolder\Software\Skripten, Plugins\Eigene\MATLAB\DetIntensitiesofAtomColumns\GUI\Seek and Integrate\for_redistribution" preferred-package-type="package.type.exe" target="target.ezdeploy.standalone" target-name="Application Compiler">
+    <param.appname>SeekandIntegrate</param.appname>
+    <param.icon>${PROJECT_ROOT}\Seek and Integrate_resources\icon.ico</param.icon>
+    <param.icons>
+      <file>${PROJECT_ROOT}\Seek and Integrate_resources\icon_48.png</file>
+      <file>${PROJECT_ROOT}\Seek and Integrate_resources\icon_32.png</file>
+      <file>${PROJECT_ROOT}\Seek and Integrate_resources\icon_24.png</file>
+      <file>${PROJECT_ROOT}\Seek and Integrate_resources\icon_16.png</file>
+    </param.icons>
+    <param.version>1.0</param.version>
+    <param.authnamewatermark>Daniel Knez</param.authnamewatermark>
+    <param.email>daniel.knez@felmi-zfe.at</param.email>
+    <param.company>FELMI-ZFE</param.company>
+    <param.summary />
+    <param.description>This program performs a search for local maxima in high resolution TEM images and performs an intensity integration.</param.description>
+    <param.screenshot>E:\Diss_workfolder\Software\Skripten, Plugins\Eigene\MATLAB\DetIntensitiesofAtomColumns\icon.png</param.screenshot>
+    <param.guid />
+    <param.installpath.string>\FELMI-ZFE\SeekandIntegrate\</param.installpath.string>
+    <param.installpath.combo>option.installpath.programfiles</param.installpath.combo>
+    <param.logo />
+    <param.install.notes />
+    <param.target.install.notes />
+    <param.intermediate>${PROJECT_ROOT}\Seek and Integrate\for_testing</param.intermediate>
+    <param.files.only>${PROJECT_ROOT}\Seek and Integrate\for_redistribution_files_only</param.files.only>
+    <param.output>${PROJECT_ROOT}\Seek and Integrate\for_redistribution</param.output>
+    <param.logdir>${PROJECT_ROOT}\Seek and Integrate</param.logdir>
+    <param.enable.clean.build>false</param.enable.clean.build>
+    <param.user.defined.mcr.options />
+    <param.embed.ctf>true</param.embed.ctf>
+    <param.target.type>subtarget.standalone</param.target.type>
+    <param.support.packages />
+    <param.web.mcr>false</param.web.mcr>
+    <param.package.mcr>true</param.package.mcr>
+    <param.no.mcr>false</param.no.mcr>
+    <param.web.mcr.name>MyAppInstaller_web</param.web.mcr.name>
+    <param.package.mcr.name>MyAppInstaller_mcr</param.package.mcr.name>
+    <param.no.mcr.name>MyAppInstaller_app</param.no.mcr.name>
+    <param.windows.command.prompt>true</param.windows.command.prompt>
+    <param.create.log>true</param.create.log>
+    <param.log.file>log</param.log.file>
+    <unset>
+      <param.version />
+      <param.summary />
+      <param.guid />
+      <param.installpath.string />
+      <param.installpath.combo />
+      <param.logo />
+      <param.target.install.notes />
+      <param.intermediate />
+      <param.files.only />
+      <param.output />
+      <param.logdir />
+      <param.enable.clean.build />
+      <param.user.defined.mcr.options />
+      <param.embed.ctf />
+      <param.target.type />
+      <param.support.packages />
+      <param.no.mcr />
+      <param.web.mcr.name />
+      <param.package.mcr.name />
+      <param.no.mcr.name />
+      <param.windows.command.prompt />
+    </unset>
+    <fileset.main>
+      <file>${PROJECT_ROOT}\GUI.m</file>
+    </fileset.main>
+    <fileset.resources>
+      <file>${PROJECT_ROOT}\GetNearestPeaks.m</file>
+    </fileset.resources>
+    <fileset.package />
+    <fileset.depfun>
+      <file>${PROJECT_ROOT}\binread2D.m</file>
+      <file>${PROJECT_ROOT}\DM3Import.m</file>
+      <file>${PROJECT_ROOT}\GUI.fig</file>
+      <file>${PROJECT_ROOT}\HirPatchPCA.m</file>
+      <file>${PROJECT_ROOT}\patchpca.m</file>
+      <file>${PROJECT_ROOT}\write32bittiff.m</file>
+    </fileset.depfun>
+    <build-deliverables>
+      <file location="${PROJECT_ROOT}\Seek and Integrate\for_testing" name="splash.png" optional="false">E:\Diss_workfolder\Software\Skripten, Plugins\Eigene\MATLAB\DetIntensitiesofAtomColumns\GUI\Seek and Integrate\for_testing\splash.png</file>
+      <file location="${PROJECT_ROOT}\Seek and Integrate\for_testing" name="SeekandIntegrate.exe" optional="false">E:\Diss_workfolder\Software\Skripten, Plugins\Eigene\MATLAB\DetIntensitiesofAtomColumns\GUI\Seek and Integrate\for_testing\SeekandIntegrate.exe</file>
+      <file location="${PROJECT_ROOT}\Seek and Integrate\for_testing" name="readme.txt" optional="true">E:\Diss_workfolder\Software\Skripten, Plugins\Eigene\MATLAB\DetIntensitiesofAtomColumns\GUI\Seek and Integrate\for_testing\readme.txt</file>
+    </build-deliverables>
+    <workflow />
+    <matlab>
+      <root>C:\Program Files\MATLAB\R2016a</root>
+      <toolboxes>
+        <toolbox name="fixedpoint" />
+        <toolbox name="matlabcoder" />
+      </toolboxes>
+      <toolbox>
+        <fixedpoint>
+          <enabled>true</enabled>
+        </fixedpoint>
+      </toolbox>
+      <toolbox>
+        <matlabcoder>
+          <enabled>true</enabled>
+        </matlabcoder>
+      </toolbox>
+    </matlab>
+    <platform>
+      <unix>false</unix>
+      <mac>false</mac>
+      <windows>true</windows>
+      <win2k>false</win2k>
+      <winxp>false</winxp>
+      <vista>false</vista>
+      <linux>false</linux>
+      <solaris>false</solaris>
+      <osver>6.2</osver>
+      <os32>false</os32>
+      <os64>true</os64>
+      <arch>win64</arch>
+      <matlab>true</matlab>
+    </platform>
+  </configuration>
+</deployment-project>
