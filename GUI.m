@@ -109,7 +109,8 @@ function segmentate_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 global I;
 global Ifilt;
-global xyscale;
+global xscale;
+global yscale;
 global ps;
 global peakx;
 global peaky;
@@ -136,11 +137,91 @@ cmin = min(Ifilt(:));
 %-----------------------
 
 minneighbourradius = round(str2num(get(handles.txtnearestn,'string')));
-% ----------------------------------------------
+
+% ---------------Method 1------------------------
 mask = true(minneighbourradius); mask(round(minneighbourradius/2),round(minneighbourradius/2)) = 0;
 peaks = Ifilt_temp > ordfilt2(Ifilt_temp,length(mask(mask==true)),mask);
 [peakpxy,peakpxx] = find(peaks==1);
+%------------------------------------------------
+
+% -------- Method 2: weighted centroid ---------
+% stats = regionprops(logical(Ifilt_temp),Ifilt_temp,'Area','WeightedCentroid')
+% rel_peaks_vec=[stats.Area]<=mean([stats.Area])+std(2*[stats.Area]);
+% cent = [stats(rel_peaks_vec).WeightedCentroid]';
+% peakpxy = cent(2:2:end);
+% peakpxx = cent(1:2:end);
 %-----------------------------------------------
+
+
+% -------- Method 3 ---------
+% sd=size(Ifilt_temp);
+% edg=3;
+% [x,y]=find(Ifilt_temp(edg:sd(1)-edg,edg:sd(2)-edg));
+% 
+% % initialize outputs
+% cent=[];%
+% cent_map=zeros(sd);
+% 
+% x=x+edg-1;
+% y=y+edg-1;
+% for j=1:length(y)
+%     if (Ifilt_temp(x(j),y(j))>=Ifilt_temp(x(j)-1,y(j)-1 )) &&...
+%             (Ifilt_temp(x(j),y(j))>Ifilt_temp(x(j)-1,y(j))) &&...
+%             (Ifilt_temp(x(j),y(j))>=Ifilt_temp(x(j)-1,y(j)+1)) &&...
+%             (Ifilt_temp(x(j),y(j))>Ifilt_temp(x(j),y(j)-1)) && ...
+%             (Ifilt_temp(x(j),y(j))>Ifilt_temp(x(j),y(j)+1)) && ...
+%             (Ifilt_temp(x(j),y(j))>=Ifilt_temp(x(j)+1,y(j)-1)) && ...
+%             (Ifilt_temp(x(j),y(j))>Ifilt_temp(x(j)+1,y(j))) && ...
+%             (Ifilt_temp(x(j),y(j))>=Ifilt_temp(x(j)+1,y(j)+1))
+% 
+%         %All these alternatives were slower...
+%         %if all(reshape( d(x(j),y(j))>=d(x(j)-1:x(j)+1,y(j)-1:y(j)+1),9,1))
+%         %if  d(x(j),y(j)) == max(max(d((x(j)-1):(x(j)+1),(y(j)-1):(y(j)+1))))
+%         %if  d(x(j),y(j))  == max(reshape(d(x(j),y(j))  >=  d(x(j)-1:x(j)+1,y(j)-1:y(j)+1),9,1))
+% 
+%         cent = [cent ;  y(j) ; x(j)];
+%         peakpxy = cent(2:2:end);
+%         peakpxx = cent(1:2:end);
+%         %cent_map(x(j),y(j))=cent_map(x(j),y(j))+1; % if a binary matrix output is desired
+% 
+%     end
+% end
+%--------------------------------------------
+
+% -------- Method 4 ---------
+% https://de.mathworks.com/matlabcentral/answers/219759-how-to-use-findpeaks-for-a-matrix-of-size-a
+% Px = {};
+% Py = {};
+% cent=[];
+% for k1 = 1:size(Ifilt_temp,1)
+%     [pks,loc] = findpeaks(Ifilt_temp(k1,:));
+%     Px{k1} =  loc;
+% end
+% for k1 = 1:size(Ifilt_temp,2)
+%     [pks,loc] = findpeaks(Ifilt_temp(:,k1));
+%     Py{k1} =  loc;
+% end
+% 
+% for i=1:length(Py)
+%     for j=1:length(Px)
+%         a=Px{j};
+%         b=Py{i};
+%         for k=1:length(Px{j})
+%             for l=1:length(Py{i})
+%                 %if abs((a(k)-b(l)))<=1
+%                 if a(k)==b(l)
+%                     cent = [cent ;  a(k) ; b(l)];
+%                 end
+%             end  
+%         end
+%     end
+% end
+% 
+% peakpxy = cent(2:2:end);
+% peakpxx = cent(1:2:end);
+        
+%-------------------------------
+
 % 
 % [rr,cc] = meshgrid(1:size(Ifilt_temp,1),1:size(Ifilt_temp,2));
 % count = 1;
@@ -184,15 +265,15 @@ end
 
 ax = gca();
 scatter(ax,peakx,peaky,'.')
-xlim([0 max(xyscale)])
-ylim([0 max(xyscale)])
-axis square;
+xlim([0 max(xscale)])
+ylim([0 max(yscale)])
+axis equal;
 xlabel('Scale [nm]');
 colormap jet;
 cb = colorbar; 
 ylabel(cb,'pixel intensity [counts]')
 hold(ax, 'on');
-imagesc(xyscale,xyscale,imresize(Ifilt_temp,binningfactor))
+imagesc(xscale,yscale,imresize(Ifilt_temp,binningfactor))
 voronoi(peakx,peaky,'w')
 caxis([cmin cmax])
 hold(ax, 'off')
@@ -220,7 +301,8 @@ clear cellintensities
 
 
 global I;
-global xyscale;
+global xscale;
+global yscale;
 global peakx;
 global peaky;
 global peakpxx;
@@ -235,7 +317,8 @@ global integrationareas;
 
 if get(handles.chbEvaluateAll,'value') == 0 || length(filenames) == 1
 
-    N = min(size(I));
+    N = size(I,2);
+    M = size(I,1);
     maxcellradius = str2num(get(handles.txtmaxintrad,'string'));
 
     % Assign each pixel to a voronoi cell based on its distance to the peak positions
@@ -260,12 +343,17 @@ if get(handles.chbEvaluateAll,'value') == 0 || length(filenames) == 1
     if get(handles.chbIgnoreOutReg,'value')==1
         [img_height, img_width] = size(I);
         ind = (peakpxx<img_width-maxcellradius) & (peakpxx-maxcellradius>0) & (peakpxy<img_height-maxcellradius) & (peakpxy-maxcellradius>0);
-        peakpxx = peakpxx(ind);
-        peakpxy = peakpxy(ind);
-        peakx = peakx(ind);
-        peaky = peaky(ind);
+        peakpxx_temp = peakpxx(ind);
+        peakpxy_temp = peakpxy(ind);
+        peakx_temp = peakx(ind);
+        peaky_temp = peaky(ind);
+    else
+        peakpxx_temp = peakpxx;
+        peakpxy_temp = peakpxy;
+        peakx_temp = peakx;
+        peaky_temp = peaky;
     end
-    LOC = GetNearestPeaks(img_height, img_width, peakpxx, peakpxy);
+    LOC = GetNearestPeaks(img_height, img_width, peakpxx_temp, peakpxy_temp);
    
      disp('Determine Intensities...');
 
@@ -274,13 +362,13 @@ if get(handles.chbEvaluateAll,'value') == 0 || length(filenames) == 1
     cellintensities = zeros(1,max(LOC(:)));
     meancellintensities = zeros(1,max(LOC(:)));
     integrationareas =  zeros(1,max(LOC(:)));
-    [rr,cc] = meshgrid(1:N);
+    [rr,cc] = meshgrid(1:N,1:M);
     cellintensityimage = zeros(size(I));
    
     for i=1:max(LOC(:)) 
         cellmask = false(size(LOC));
         cellmask(LOC==i)=true;
-        circlemask = logical(sqrt((rr-peakpxx(i)).^2+(cc-peakpxy(i)).^2)<=maxcellradius);
+        circlemask = logical(sqrt((rr-peakpxx_temp(i)).^2+(cc-peakpxy_temp(i)).^2)<=maxcellradius);
         cellmask = cellmask & circlemask;
         cellintensities(i) = sum(I(cellmask));
         cellintensityimage = cellintensityimage + cellmask.*cellintensities(i);
@@ -292,15 +380,15 @@ if get(handles.chbEvaluateAll,'value') == 0 || length(filenames) == 1
 
     ax = gca();
     scatter(ax,peakx,peaky,'.')
-    xlim([0 max(xyscale)])
-    ylim([0 max(xyscale)])
-    axis square;
+    xlim([0 max(xscale)])
+    ylim([0 max(yscale)])
+    axis equal;
     cb = colorbar;
     ylabel(cb,'integrated intensity [counts]')
     xlabel('scale [nm]')
     colormap jet;
     hold(ax, 'on');
-    imagesc(xyscale,xyscale,cellintensityimage);
+    imagesc(xscale,yscale,cellintensityimage);
     voronoi(peakx, peaky,'w')
     hold(ax, 'off');
     set(gcf,'PaperPositionMode','auto')
@@ -352,8 +440,10 @@ else  % evaluate all files in a folder (CheckBox Evaluate all files activated
                 return;
         end
 
-        N = min(size(I));
-        xyscale = (0:N-1).*ps;
+        N = size(I,2);
+        M = size(I,1);
+        xscale = (0:N-1).*ps;
+        yscale = (0:M-1).*ps;
 
         cmax = max(I(:));
         cmin = min(I(:));
@@ -365,9 +455,9 @@ else  % evaluate all files in a folder (CheckBox Evaluate all files activated
         minpeak = str2num(get(handles.lblThreshInt,'string'));
         
         ax = gca(); 
-        imagesc(xyscale,xyscale,Ifilt);
+        imagesc(xscale,yscale,Ifilt);
         set(ax, 'YDir', 'normal')
-        axis square
+        axis equal
         xlabel('Scale [nm]');
         colormap gray;
         cb = colorbar; 
@@ -394,9 +484,9 @@ else  % evaluate all files in a folder (CheckBox Evaluate all files activated
                     [Ifilt,~] = HirPatchPCA(I, startw, PCn, 1);
 
                     ax = gca(); 
-                    imagesc(xyscale,xyscale,Ifilt);
+                    imagesc(xscale,yscale,Ifilt);
                     set(ax, 'YDir', 'normal')
-                    axis square
+                    axis equal
                     xlabel('Scale [nm]');
                     colormap gray;
                     cb = colorbar; 
@@ -413,9 +503,9 @@ else  % evaluate all files in a folder (CheckBox Evaluate all files activated
                     Ifilt = imfilter(I,h,'replicate');
 
                     ax = gca();
-                    imagesc(xyscale,xyscale,Ifilt);
+                    imagesc(xscale,yscale,Ifilt);
                     set(ax, 'YDir', 'normal')
-                    axis square
+                    axis equal
                     xlabel('Scale [nm]');
                     colormap gray;
                     cb = colorbar; 
@@ -484,15 +574,15 @@ else  % evaluate all files in a folder (CheckBox Evaluate all files activated
         
         ax = gca();
         scatter(ax,peakx,peaky,'.')
-        xlim([0 max(xyscale)])
-        ylim([0 max(xyscale)])
-        axis square;
+        xlim([0 max(xscale)])
+        ylim([0 max(yscale)])
+        axis equal;
         cb = colorbar;
         ylabel(cb,'integrated intensity [counts]')
         xlabel('scale [nm]')
         colormap jet;
         hold(ax, 'on');
-        himage = imagesc(xyscale,xyscale,cellintensityimage);
+        himage = imagesc(xscale,yscale,cellintensityimage);
         %himage.AlphaData = 0.3;
         voronoi(peakx, peaky,'w')
         title('cells with corresponding intensities');
@@ -528,7 +618,8 @@ function filter_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 global I;
-global xyscale;
+global xscale;
+global yscale;
 global Ifilt;
 
 binningfactor = str2num(get(handles.txtbinningf,'string'));
@@ -549,9 +640,9 @@ switch choice
         [Ifilt,~] = HirPatchPCA(I, startw, PCn, 1);
         
         ax = gca(); 
-        imagesc(xyscale,xyscale,Ifilt);
+        imagesc(xscale,yscale,Ifilt);
         set(ax, 'YDir', 'normal')
-        axis square
+        axis equal
         xlabel('Scale [nm]');
         colormap gray;
         cb = colorbar; 
@@ -568,9 +659,9 @@ switch choice
         Ifilt = imfilter(I,h,'replicate');
         
         ax = gca();
-        imagesc(xyscale,xyscale,Ifilt);
+        imagesc(xscale,yscale,Ifilt);
         set(ax, 'YDir', 'normal')
-        axis square
+        axis equal
         xlabel('Scale [nm]');
         colormap gray;
         cb = colorbar; 
@@ -588,7 +679,8 @@ function Load_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 global I;
-global xyscale;
+global xscale;
+global yscale;
 global ps;
 global Iorg;
 global Ifilt;
@@ -624,25 +716,29 @@ if file ~= 0
 
     if ext=='.tif'    
         % Read from Image (TIF) -File
-        I = imread(strcat(path,file));  
+        I = imread(strcat(filepath,file));  
 
         prompt = {'Enter pixel size in nm'};
         pixelsize = inputdlg(prompt,'Enter pixel size',1,{'1'});
         ps = str2num(pixelsize{:});
+        
     elseif ext=='.dm3'
 
-        % Import from DM3-File:
-        I_struct = DM3Import(strcat(filepath,file));
-        disp(I_struct)
+%         % Import from DM3-File:
+%         I_struct = DM3Import(strcat(filepath,file));
+%         disp(I_struct)
+% 
+%         % Get size of image in pixels
+%         if exist('I_struct.intensity.scale')
+%             I = I_struct.image_data .* I_struct.intensity.scale; % Scale from counts to electrons   
+%         else
+%             I = I_struct.image_data;
+%         end
+%         % Get pixel size (in nm)
+%         ps = I_struct.xaxis.scale;
 
-        % Get size of image in pixels
-        if exist('I_struct.intensity.scale')
-            I = I_struct.image_data .* I_struct.intensity.scale; % Scale from counts to electrons   
-        else
-            I = I_struct.image_data;
-        end
-        % Get pixel size (in nm)
-        ps = I_struct.xaxis.scale;
+          [I, ps] = ReadDMFile([filepath file]);
+          
     elseif ext=='.dm4'
                 [I, ps, units] = ReadDMFile(strcat(filepath,file));
                 I = double(I');
@@ -661,20 +757,30 @@ if file ~= 0
         return;
     end
 
-    N = min(size(I));
-    xyscale = (0:N-1).*ps;
+    N = size(I,2);
+    M = size(I,1);
+    xscale = (0:N-1).*ps;
+    yscale = (0:M-1).*ps;
 
     cmax = max(I(:));
     cmin = min(I(:));
     Imax = max(I(:));
 
+    if Imax<1
+        I = I .*1000;
+        
+        cmax = max(I(:));
+        cmin = min(I(:));
+        Imax = max(I(:));
+    end
+    
     Iorg = I;
     Ifilt = I;
 
     ax = gca(); 
-    imagesc(xyscale,xyscale,Ifilt);
+    imagesc(xscale,yscale,Ifilt);
     set(ax, 'YDir', 'normal')
-    axis square
+    axis equal
     xlabel('Scale [nm]');
     colormap gray;
     cb = colorbar; 
@@ -718,6 +824,7 @@ if file ~= 0
     set(handles.chbEvaluateAll,'value',0)
     set(handles.lblThreshInt,'string',num2str(round(mean(I(:)))));
     set(handles.sldThreshInt, 'SliderStep', [1/Imax , 10/Imax ]);
+    %set(handles.sldThreshInt, 'SliderStep', [Imax/100 , Imax/10 ]);
 
 end
 % --- Executes on selection change in chfilter.
@@ -900,7 +1007,8 @@ function sldThreshInt_Callback(hObject, eventdata, handles)
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
 
 global Ifilt
-global xyscale
+global xscale;
+global yscale;
 
 cmax = max(Ifilt(:));
 
@@ -910,9 +1018,9 @@ set(handles.cmdReset,'enable','on');
 minpeak = str2num(get(handles.lblThreshInt,'string'));
 
 ax = gca(); 
-imagesc(xyscale,xyscale,Ifilt);
+imagesc(xscale,yscale,Ifilt);
 set(ax, 'YDir', 'normal')
-axis square
+axis equal
 xlabel('Scale [nm]');
 colormap gray;
 cb = colorbar; 
@@ -1011,7 +1119,8 @@ function lblThreshInt_KeyPressFcn(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 global Ifilt
-global xyscale
+global xscale;
+global yscale;
 
 set(handles.sldThreshInt,'value',round(str2num(get(handles.lblThreshInt,'string'))));
 set(handles.cmdReset,'enable','on');
@@ -1024,9 +1133,9 @@ set(handles.cmdReset,'enable','on');
 minpeak = str2num(get(handles.lblThreshInt,'string'));
 
 ax = gca(); 
-imagesc(xyscale,xyscale,Ifilt);
+imagesc(xscale,yscale,Ifilt);
 set(ax, 'YDir', 'normal')
-axis square
+axis equal
 xlabel('Scale [nm]');
 colormap gray;
 cb = colorbar; 
@@ -1078,7 +1187,8 @@ function cmdPlotIorg_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 global Iorg;
-global xyscale;
+global xscale;
+global yscale;
 
 cmax = max(Iorg(:));
 cmin = min(Iorg(:));
@@ -1086,10 +1196,10 @@ cmin = min(Iorg(:));
 figIorg = figure;
 ax = gca();
 set(figIorg,'DefaultAxesFontName', 'Arial', 'DefaultAxesFontSize', 14, 'DefaultAxesFontWeight', 'Demi' );
-imagesc(xyscale,xyscale,Iorg);
+imagesc(xscale,yscale,Iorg);
 imagesc(Iorg);
 set(ax, 'YDir', 'normal')
-axis square
+axis equal
 xlabel('Scale [nm]');
 colormap gray;
 cb = colorbar; 
@@ -1107,7 +1217,8 @@ function cmdPlotFiltered_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 global Ifilt;
-global xyscale;
+global xscale;
+global yscale;
 
 cmax = max(Ifilt(:));
 cmin = min(Ifilt(:));
@@ -1115,9 +1226,9 @@ cmin = min(Ifilt(:));
 figIfilt = figure;
 ax = gca();
 set(figIfilt,'DefaultAxesFontName', 'Arial', 'DefaultAxesFontSize', 14, 'DefaultAxesFontWeight', 'Demi' );
-imagesc(xyscale,xyscale,Ifilt);
+imagesc(xscale,yscale,Ifilt);
 set(ax, 'YDir', 'normal')
-axis square
+axis equal
 xlabel('Scale [nm]');
 colormap gray;
 cb = colorbar; 
@@ -1141,21 +1252,22 @@ function cmdPlotResult_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 global peakx;
 global peaky;
-global xyscale;
+global xscale;
+global yscale;
 global cellintensityimage;
 
 figResult = figure;
 ax = gca();
 scatter(ax,peakx,peaky,'.')
-xlim([0 max(xyscale)])
-ylim([0 max(xyscale)])
-axis square;
+xlim([0 max(xscale)])
+ylim([0 max(yscale)])
+axis equal;
 cb = colorbar;
 ylabel(cb,'integrated intensity [counts]')
 xlabel('scale [nm]')
 colormap jet;
 hold(ax, 'on');
-imagesc(xyscale,xyscale,cellintensityimage);
+imagesc(xscale,yscale,cellintensityimage);
 caxis([min(cellintensityimage(cellintensityimage~=0)) max(cellintensityimage(:))]);
 voronoi(peakx, peaky,'w')
 title('cells with corresponding intensities');
@@ -1202,7 +1314,7 @@ if filename ~= 0
     if ext == '.csv' 
         csvwrite([pathname, filename],[index, peakx, peaky, peakpxx, peakpxy, cellintensities']);
     elseif ext == '.xls'
-        Col_header = {'index','peak x coordinate [pixel]','peak y coordinate [pixel]','peak x coordinate [nm]','peak y coordinate [nm]','cell intensities [counts]','integration area [pixel]','mean cell intensities [counts/pixel]'};
+        Col_header = {'index','peak x coordinate [nm]','peak y coordinate [nm]','peak x coordinate [pixel]','peak y coordinate [pixel]','cell intensities [counts]','integration area [pixel]','mean cell intensities [counts/pixel]'};
         xlswrite([pathname, filename],[index, peakx, peaky, peakpxx, peakpxy, cellintensities',integrationareas', meancellintensities'],'Sheet1','A2'); % write data
         xlswrite([pathname, filename],Col_header,'Sheet1','A1');     %Write column header
     end
@@ -1287,7 +1399,8 @@ global peakpxy;
 global ps;
 global peakx;
 global peaky;
-global xyscale;
+global xscale;
+global yscale;
 global Ifilt;
 global standardpath;
 global maxfile;
@@ -1314,15 +1427,15 @@ cmax = max(Ifilt(:));
 
 ax = gca();
 scatter(ax,peakx,peaky,'.')
-xlim([0 max(xyscale)])
-ylim([0 max(xyscale)])
-axis square;
+xlim([0 max(xscale)])
+ylim([0 max(yscale)])
+axis equal;
 xlabel('Scale [nm]');
 colormap jet;
 cb = colorbar; 
 ylabel(cb,'pixel intensity [counts]')
 hold(ax, 'on');
-imagesc(xyscale,xyscale,imresize(Ifilt,binningfactor))
+imagesc(xscale,yscale,imresize(Ifilt,binningfactor))
 voronoi(peakx,peaky,'w')
 caxis([minpeak cmax])
 hold(ax, 'off')
@@ -1361,7 +1474,8 @@ function cmdInvert_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 global Ifilt
-global xyscale
+global xscale;
+global yscale;
 
 Ifilt = max(Ifilt(:))-Ifilt;
 
@@ -1377,9 +1491,9 @@ set(handles.lblThreshInt,'string',num2str(round(mean(Ifilt(:)))));
 minpeak = str2num(get(handles.lblThreshInt,'string'));
 
 ax = gca(); 
-imagesc(xyscale,xyscale,Ifilt);
+imagesc(xscale,yscale,Ifilt);
 set(ax, 'YDir', 'normal')
-axis square
+axis equal
 xlabel('Scale [nm]');
 colormap gray;
 cb = colorbar; 
