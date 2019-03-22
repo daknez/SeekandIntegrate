@@ -345,6 +345,7 @@ global filepath;
 global maxfile;
 global meancellintensities;
 global integrationareas;
+global indOutsideregions;
 
 if get(handles.chbEvaluateAll,'value') == 0 || length(filenames) == 1
 
@@ -378,15 +379,17 @@ if get(handles.chbEvaluateAll,'value') == 0 || length(filenames) == 1
         peakpxy_temp = peakpxy(ind);
         peakx_temp = peakx(ind);
         peaky_temp = peaky(ind);
+        indOutsideregions = ind;
     else
         peakpxx_temp = peakpxx;
         peakpxy_temp = peakpxy;
         peakx_temp = peakx;
         peaky_temp = peaky;
+        indOutsideregions = ones(1,length(peakx));
     end
     LOC = GetNearestPeaks(img_height, img_width, peakpxx_temp, peakpxy_temp);
    
-     disp('Determine Intensities...');
+    disp('Determine Intensities...');
 
     % sum up all pixel intensities in each voroni cell: 
 
@@ -579,7 +582,7 @@ else  % evaluate all files in a folder (CheckBox Evaluate all files activated
             peakx = peakx(ind);
             peaky = peaky(ind);
         end
-        
+
         [img_height, img_width] = size(I);
         LOC = GetNearestPeaks(img_height, img_width, peakpxx, peakpxy);
 
@@ -633,7 +636,7 @@ else  % evaluate all files in a folder (CheckBox Evaluate all files activated
         end
         
         disp(['write ' filesave '_results.xls']);
-        xlswrite([filesave '_results.xls'],[index, peakx, peaky, peakpxx, peakpxy, cellintensities' ,integrationareas', meancellintensities'],'Sheet1','A2'); % write data
+        xlswrite([filesave '_results.xls'],[index(indOutsideregions), peakx(indOutsideregions), peaky(indOutsideregions), peakpxx(indOutsideregions), peakpxy(indOutsideregions), cellintensities' ,integrationareas', meancellintensities'],'Sheet1','A2'); % write data
         xlswrite([filesave '_results.xls'],Col_header,'Sheet1','A1');     %Write column header
         
         disp(['write ' filesave '_resultfig.png']);
@@ -1338,6 +1341,7 @@ global cellintensities;
 global filepath;
 global meancellintensities;
 global integrationareas;
+global indOutsideregions;
 
 standardpath = filepath;
 
@@ -1346,10 +1350,10 @@ if filename ~= 0
     [~,~,ext] = fileparts(filename);
     index = (1:length(peakx))';
     if ext == '.csv' 
-        csvwrite([pathname, filename],[index, peakx, peaky, peakpxx, peakpxy, cellintensities']);
+        csvwrite([pathname, filename],[index(indOutsideregions), peakx(indOutsideregions), peaky(indOutsideregions), peakpxx(indOutsideregions), peakpxy(indOutsideregions), cellintensities']);
     elseif ext == '.xls'
         Col_header = {'index','peak x coordinate [nm]','peak y coordinate [nm]','peak x coordinate [pixel]','peak y coordinate [pixel]','cell intensities [counts]','integration area [pixel]','mean cell intensities [counts/pixel]'};
-        xlswrite([pathname, filename],[index, peakx, peaky, peakpxx, peakpxy, cellintensities',integrationareas', meancellintensities'],'Sheet1','A2'); % write data
+        xlswrite([pathname, filename],[index(indOutsideregions), peakx(indOutsideregions), peaky(indOutsideregions), peakpxx(indOutsideregions), peakpxy(indOutsideregions), cellintensities',integrationareas', meancellintensities'],'Sheet1','A2'); % write data
         xlswrite([pathname, filename],Col_header,'Sheet1','A1');     %Write column header
     end
 end
