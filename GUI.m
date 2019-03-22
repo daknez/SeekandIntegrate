@@ -22,7 +22,7 @@ function varargout = GUI(varargin)
 
 % Edit the above text to modify the response to help GUI
 
-% Last Modified by GUIDE v2.5 22-Jun-2017 14:51:32
+% Last Modified by GUIDE v2.5 22-Mar-2019 08:49:26
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -136,13 +136,18 @@ cmin = min(Ifilt(:));
 % peak finding:
 %-----------------------
 
+methodch = get(handles.chmethod,'string');
+choice = methodch{get(handles.chmethod,'Value')};
+        
 minneighbourradius = round(str2num(get(handles.txtnearestn,'string')));
 
-% ---------------Method 1------------------------
-mask = true(minneighbourradius); mask(round(minneighbourradius/2),round(minneighbourradius/2)) = 0;
-peaks = Ifilt_temp > ordfilt2(Ifilt_temp,length(mask(mask==true)),mask);
-[peakpxy,peakpxx] = find(peaks==1);
-%------------------------------------------------
+switch choice
+    case 'Local Max'
+        % ---------------Method 1------------------------
+        mask = true(minneighbourradius); mask(round(minneighbourradius/2),round(minneighbourradius/2)) = 0;
+        peaks = Ifilt_temp > ordfilt2(Ifilt_temp,length(mask(mask==true)),mask);
+        [peakpxy,peakpxx] = find(peaks==1);
+        %------------------------------------------------
 
 % -------- Method 2: weighted centroid ---------
 % stats = regionprops(logical(Ifilt_temp),Ifilt_temp,'Area','WeightedCentroid')
@@ -221,6 +226,32 @@ peaks = Ifilt_temp > ordfilt2(Ifilt_temp,length(mask(mask==true)),mask);
 % peakpxx = cent(1:2:end);
         
 %-------------------------------
+
+  case 'Segmentation'
+    %--------- METHOD 5 ------------
+    % Particle detection
+    thrlevel = str2num(get(handles.lblThreshInt,'string')); %graythresh(blurredimage);
+    %binaryImage = im2bw(Ifilt,thrlevel);
+    binaryImage = imbinarize(Ifilt,thrlevel);
+
+    labeledImage = bwlabel(binaryImage, 8); % Label each blob so cando calc on it
+    coloredLabels = label2rgb(labeledImage, 'hsv', 'k', 'shuffle'); %pseudo random color labels
+
+    blobMeasurements = regionprops(labeledImage, 'all'); % Get all the blob properties.
+    numberOfBlobs = size(blobMeasurements, 1)
+
+    peakpxy = [];
+    peakpxx = [];
+
+    for k = 1 : numberOfBlobs % Loop through all blobs.
+
+        blobCentroid = blobMeasurements(k).Centroid; % Get centroid (geometrischer Mittelpunkt)
+        peakpxy = [peakpxy ; blobCentroid(2)];
+        peakpxx = [peakpxx ; blobCentroid(1)];
+    end
+
+%---------------------------------------------------
+end
 
 % 
 % [rr,cc] = meshgrid(1:size(Ifilt_temp,1),1:size(Ifilt_temp,2));
@@ -382,6 +413,7 @@ if get(handles.chbEvaluateAll,'value') == 0 || length(filenames) == 1
     scatter(ax,peakx,peaky,'.')
     xlim([0 max(xscale)])
     ylim([0 max(yscale)])
+    caxis([0.9*min(cellintensities(cellintensities>0)) max(cellintensities(:))])
     axis equal;
     cb = colorbar;
     ylabel(cb,'integrated intensity [counts]')
@@ -806,6 +838,8 @@ if file ~= 0
     set(handles.cmdSaveHist,'enable','off');
     set(handles.cmdInvert,'enable','on');
     set(handles.cmdReadPeakCoords,'enable','on');
+    set(handles.cmdAddMan,'enable','on');
+    %set(handles.cmdOptimize,'enable','on');
 
     set(handles.lblHist,'enable','off');
     set(handles.lblThrInt,'enable','on');
@@ -1327,6 +1361,9 @@ function cmdSaveHist_Callback(hObject, eventdata, handles)
 
 % Hint: get(hObject,'Value') returns toggle state of cmdSaveHist
 global cellintensities;
+global filepath;
+
+standardpath = filepath;
 
 histogramvalues = str2num(get(handles.txtHistCat,'string'));
 [counts,histcountsedges] = histcounts(cellintensities,histogramvalues);
@@ -1415,8 +1452,8 @@ peakpxy = temp(:,2);
 
 peakx = [];
 peaky = [];
-peakx = (peakpxx.*ps-ps);
-peaky = (peakpxy.*ps-ps);
+peakx = double(peakpxx.*ps-ps);
+peaky = double(peakpxy.*ps-ps);
 
 binningfactor = str2num(get(handles.txtbinningf,'string'));
 
@@ -1530,29 +1567,183 @@ else
     set(handles.chbSameMax,'enable','off');
 end
 
-% --- Executes on key press with focus on sldThreshInt and none of its controls.
-function sldThreshInt_KeyPressFcn(hObject, eventdata, handles)
-% hObject    handle to sldThreshInt (see GCBO)
-% eventdata  structure with the following fields (see MATLAB.UI.CONTROL.UICONTROL)
-%	Key: name of the key that was pressed, in lower case
-%	Character: character interpretation of the key(s) that was pressed
-%	Modifier: name(s) of the modifier key(s) (i.e., control, shift) pressed
-% handles    structure with handles and user data (see GUIDATA)
 
-
-% --- Executes on button press in chbSameMax.
-function chbSameMax_Callback(hObject, eventdata, handles)
-% hObject    handle to chbSameMax (see GCBO)
+% --- Executes on button press in cmdAddMan.
+function cmdAddMan_Callback(hObject, eventdata, handles)
+% hObject    handle to cmdAddMan (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of chbSameMax
+global Ifilt
+global xscale;
+global yscale;
+global peakpxx;
+global peakpxy;
+global peakx;
+global peaky;
+global ps;
 
 
-% --- Executes on button press in chbIgnoreOutReg.
+cmax = max(Ifilt(:));
+m = size(Ifilt,1);
+n = size(Ifilt,2);
+minpeak = str2num(get(handles.lblThreshInt,'string'))
+binningfactor = str2num(get(handles.txtbinningf,'string'));
+
+ax = gca(); 
+pl2 = imagesc(xscale,yscale,Ifilt);
+hold on
+[vx,vy] = voronoi(peakx,peaky);
+%pl1 = plot(peakx,peaky,'r+',vx,vy,'b-');
+pl1 = plot(peakx,peaky,'w+');
+hold off
+set(ax, 'YDir', 'normal')
+axis equal
+xlabel('Scale [nm]');
+colormap jet;
+cb = colorbar; 
+caxis([minpeak cmax])
+ylim([min(xscale) max(xscale)]);
+xlim([min(yscale) max(yscale)]);
+ylabel(cb,'counts')
+
+set(pl1,'YDataSource','peaky','XDataSource','peakx')
+
+stop = false;
+while stop == false;
+    
+    [px,py,key] = ginput(1)
+    
+    if key == 1 % left mouse button
+        if px>m*ps px=m*ps; end
+        if py>n*ps py=n*ps; end
+        if px<1*ps px=ps; end
+        if py<1*ps py=ps; end
+
+        peakpxx = [peakpxx; double(px/ps)];
+        peakpxy = [peakpxy; double(py/ps)];
+        
+    elseif key == 3 % right mouse button
+        
+        if px>m*ps px=m*ps; end
+        if py>n*ps py=n*ps; end
+        if px<1*ps px=ps; end
+        if py<1*ps py=ps; end
+
+        %compute Euclidean distances:
+        distances = sqrt(sum(bsxfun(@minus, [px,py]./ps , [peakpxx, peakpxy]).^2,2));
+        
+        %find the smallest distance and use that as an index:
+        ind = find(distances==min(distances));
+        peakpxx(ind) = [];
+        peakpxy(ind) = [];
+    else
+        stop = true;
+    end
+    
+    peakx = double(peakpxx.*ps);
+    peaky = double(peakpxy.*ps);
+    
+    refreshdata(pl1,'caller')
+    refreshdata(pl2,'caller')
+    drawnow
+
+end
+
+ax = gca();
+scatter(ax,peakx,peaky,'.')
+xlim([0 max(xscale)])
+ylim([0 max(yscale)])
+axis equal;
+xlabel('Scale [nm]');
+colormap jet;
+cb = colorbar; 
+ylabel(cb,'pixel intensity [counts]')
+hold(ax, 'on');
+imagesc(xscale,yscale,imresize(Ifilt,binningfactor))
+voronoi(peakx,peaky,'w')
+caxis([minpeak cmax])
+hold(ax, 'off')
+set(gcf,'PaperPositionMode','auto')
+print('temp','-dpng','-r0')
+
+
+% --- Executes on button press in cmdOptimize.
+function cmdOptimize_Callback(hObject, eventdata, handles)
+% hObject    handle to cmdOptimize (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+global Ifilt
+global xscale;
+global yscale;
+global peakpxx;
+global peakpxy;
+global peakx;
+global peaky;
+global ps;
+
+cmax = max(Ifilt(:));
+m = size(Ifilt,1);
+n = size(Ifilt,2);
+data = double(Ifilt);
+
+% Coeficients A convention:
+%	A = [Amplitude, x0, x-Width, y0, y-Width]
+g = @(A,X) A(1)*exp( -((X(:,:,1)-A(2)).^2/(2*A(3)^2) + (X(:,:,2)-A(4)).^2/(2*A(5)^2)) );
+
+i = 1;
+A0 = double([cmax,peakpxx(i),10,peakpxy(i),10]);   % Inital (guess) parameters
+InterpMethod='nearest'; % 'nearest','linear','spline','cubic'
+
+lb = double([0,peakpxx(i)-10,0,peakpxy(i)-10,0]);
+ub = double([cmax,peakpxx(i)+10,10,peakpxy(i)+10,10]);
+
+%% ---Build numerical Grids---
+% Numerical Grid
+[x,y]=meshgrid(-n/2:n/2,-m/2:m/2); 
+X=zeros(m,n,2); 
+X(:,:,1)=x; 
+X(:,:,2)=y;
+
+[A,resnorm,res,flag,output] = lsqcurvefit(g,A0,X,data,lb,ub);
+
+
+% --- Executes during object creation, after setting all properties.
+function chmethod_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to chmethod (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+function chmethod_Callback(hObject, eventdata, handles)
+% hObject    handle to chfilter (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns chfilter contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from chfilter
+
+methodch = get(handles.chmethod,'string');
+choice = methodch{get(handles.chmethod,'Value')};
+switch choice
+    case 'Local Max'
+        set(handles.txtbinningf,'enable','on');
+        set(handles.txtnearestn,'enable','on');
+        set(handles.lblbinfac,'enable','on');
+        set(handles.lblNearestN,'enable','on');
+        
+    case 'Segmentation'
+        set(handles.txtbinningf,'enable','off');
+        set(handles.txtnearestn,'enable','off');
+        set(handles.lblbinfac,'enable','off');
+        set(handles.lblNearestN,'enable','off');
+            
+end
+
 function chbIgnoreOutReg_Callback(hObject, eventdata, handles)
-% hObject    handle to chbIgnoreOutReg (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of chbIgnoreOutReg
