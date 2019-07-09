@@ -22,7 +22,7 @@ function varargout = GUI(varargin)
 
 % Edit the above text to modify the response to help GUI
 
-% Last Modified by GUIDE v2.5 22-Mar-2019 08:49:26
+% Last Modified by GUIDE v2.5 17-Jun-2019 21:03:23
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -315,6 +315,9 @@ set(handles.txtmaxintrad,'enable','on');
 set(handles.lblmaxintrad,'enable','on');
 set(handles.cmdSaveMax,'enable','on');
 set(handles.pushbutton21,'enable','on');
+set(handles.txtBackgroundInt,'enable','on');
+set(handles.lblBackgroundInt,'enable','on');
+set(handles.cmdResetBkint,'enable','on');
 
 set(handles.lblHist,'enable','on');
 set(handles.txtHistCat,'enable','on');
@@ -346,6 +349,9 @@ global maxfile;
 global meancellintensities;
 global integrationareas;
 global indOutsideregions;
+global BkgrdInt;
+
+BkgrdInt = str2num(get(handles.txtBackgroundInt,'string'))
 
 if get(handles.chbEvaluateAll,'value') == 0 || length(filenames) == 1
 
@@ -404,7 +410,7 @@ if get(handles.chbEvaluateAll,'value') == 0 || length(filenames) == 1
         cellmask(LOC==i)=true;
         circlemask = logical(sqrt((rr-peakpxx_temp(i)).^2+(cc-peakpxy_temp(i)).^2)<=maxcellradius);
         cellmask = cellmask & circlemask;
-        cellintensities(i) = sum(I(cellmask));
+        cellintensities(i) = sum(I(cellmask)-BkgrdInt);
         cellintensityimage = cellintensityimage + cellmask.*cellintensities(i);
         integrationareas(i) = length(cellmask(cellmask==true));
         meancellintensities(i) = cellintensities(i)/length(cellmask(cellmask==true));
@@ -599,7 +605,7 @@ else  % evaluate all files in a folder (CheckBox Evaluate all files activated
             cellmask(LOC==i)=true;
             circlemask = logical(sqrt((rr-peakpxx(i)).^2+(cc-peakpxy(i)).^2)<=maxcellradius);
             cellmask = cellmask & circlemask;
-            cellintensities(i) = sum(I(cellmask));
+            cellintensities(i) = sum(I(cellmask)-BkgrdInt);
             cellintensityimage = cellintensityimage + cellmask.*cellintensities(i);
             integrationareas(i) = length(cellmask(cellmask==true));
             meancellintensities(i) = cellintensities(i)/length(cellmask(cellmask==true));
@@ -723,6 +729,7 @@ global filenames;
 global filepath;
 global maxfile;
 global standardpath;
+global BkgrdInt;
 
 maxfile = '0';
 if exist('standardpath')==0
@@ -811,6 +818,11 @@ if file ~= 0
     
     Iorg = I;
     Ifilt = I;
+    
+    Itemp=sort(Ifilt(:));
+    nelm = round(length(Itemp)/20);
+    BkgrdInt = mean(Itemp(1:nelm));
+    set(handles.txtBackgroundInt,'string',num2str(BkgrdInt));
 
     ax = gca(); 
     imagesc(xscale,yscale,Ifilt);
@@ -824,12 +836,18 @@ if file ~= 0
 
     set(handles.cmdPlotIorg,'enable','on');
     set(handles.segmentate,'enable','on');
-    set(handles.sldThreshInt,'enable','on');
+    set(handles.cmdXLarger,'enable','on');
+    set(handles.cmdLarger,'enable','on');
+    set(handles.cmdXSmaller,'enable','on');
+    set(handles.cmdSmaller,'enable','on');
     set(handles.text3,'enable','on');
     set(handles.chfilter,'enable','on');
     set(handles.integrate,'enable','off');
     set(handles.txtmaxintrad,'enable','off');
     set(handles.lblmaxintrad,'enable','off');
+    set(handles.txtBackgroundInt,'enable','off');
+    set(handles.lblBackgroundInt,'enable','off');
+    set(handles.cmdResetBkint,'enable','off');
     set(handles.cmdReset,'enable','off');
     set(handles.pumPCAw,'visible','off');
     set(handles.filterwidth,'visible','on');
@@ -856,12 +874,9 @@ if file ~= 0
     end
 
     set(handles.txtpath,'string',file);
-    set(handles.sldThreshInt,'Max',Imax);
-    set(handles.sldThreshInt,'Value',round(mean(I(:))));
     set(handles.chbEvaluateAll,'value',0)
     set(handles.lblThreshInt,'string',num2str(round(mean(I(:)))));
-    set(handles.sldThreshInt, 'SliderStep', [1/Imax , 10/Imax ]);
-    %set(handles.sldThreshInt, 'SliderStep', [Imax/100 , Imax/10 ]);
+    %set(handles.sldThreshInt, 'SliderStep', [1/Imax , 10/Imax ]);
 
 end
 % --- Executes on selection change in chfilter.
@@ -1012,15 +1027,6 @@ end
 
 
 
-function txtmaxintrad_Callback(hObject, eventdata, handles)
-% hObject    handle to txtmaxintrad (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of txtmaxintrad as text
-%        str2double(get(hObject,'String')) returns contents of txtmaxintrad as a double
-
-
 % --- Executes during object creation, after setting all properties.
 function txtmaxintrad_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to txtmaxintrad (see GCBO)
@@ -1033,36 +1039,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
-
-% --- Executes on slider movement.
-function sldThreshInt_Callback(hObject, eventdata, handles)
-% hObject    handle to sldThreshInt (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'Value') returns position of slider
-%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
-
-global Ifilt
-global xscale;
-global yscale;
-
-cmax = max(Ifilt(:));
-
-set(handles.lblThreshInt,'string',round(get(handles.sldThreshInt,'value')));
-set(handles.cmdReset,'enable','on');
-
-minpeak = str2num(get(handles.lblThreshInt,'string'));
-
-ax = gca(); 
-imagesc(xscale,yscale,Ifilt);
-set(ax, 'YDir', 'normal')
-axis equal
-xlabel('Scale [nm]');
-colormap gray;
-cb = colorbar; 
-caxis([minpeak cmax])
-ylabel(cb,'counts')
 
 % --- Executes during object creation, after setting all properties.
 function sldThreshInt_CreateFcn(hObject, eventdata, handles)
@@ -1159,12 +1135,10 @@ global Ifilt
 global xscale;
 global yscale;
 
-set(handles.sldThreshInt,'value',round(str2num(get(handles.lblThreshInt,'string'))));
 set(handles.cmdReset,'enable','on');
 
 cmax = max(Ifilt(:));
 
-set(handles.lblThreshInt,'string',round(get(handles.sldThreshInt,'value')));
 set(handles.cmdReset,'enable','on');
 
 minpeak = str2num(get(handles.lblThreshInt,'string'));
@@ -1189,7 +1163,6 @@ function cmdReset_Callback(hObject, eventdata, handles)
 
 global I;
 
-set(handles.sldThreshInt,'Value',round(mean(I(:))));
 set(handles.lblThreshInt,'string',num2str(round(mean(I(:)))));
 set(handles.cmdReset,'enable','off');
 
@@ -1490,6 +1463,9 @@ set(handles.txtmaxintrad,'enable','on');
 set(handles.lblmaxintrad,'enable','on');
 set(handles.cmdSaveMax,'enable','on');
 set(handles.pushbutton21,'enable','on');
+set(handles.lblBackgroundInt,'enable','on');
+set(handles.txtBackgroundInt,'enable','on');
+set(handles.cmdResetBkint,'enable','on');
 
 set(handles.lblHist,'enable','on');
 set(handles.txtHistCat,'enable','on');
@@ -1523,10 +1499,6 @@ Ifilt = max(Ifilt(:))-Ifilt;
 cmax = max(Ifilt(:));
 cmin = min(Ifilt(:));
 
-set(handles.sldThreshInt,'Max',cmax);
-set(handles.sldThreshInt,'Min',cmin);
-
-set(handles.sldThreshInt,'Value',round(mean(Ifilt(:))));
 set(handles.lblThreshInt,'string',num2str(round(mean(Ifilt(:)))));
 
 minpeak = str2num(get(handles.lblThreshInt,'string'));
@@ -1750,4 +1722,136 @@ switch choice
             
 end
 
-function chbIgnoreOutReg_Callback(hObject, eventdata, handles)
+% --- Executes on button press in cmdLarger.
+function cmdLarger_Callback(hObject, eventdata, handles)
+% hObject    handle to cmdLarger (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global Ifilt
+global xscale;
+global yscale;
+
+cmax = max(Ifilt(:));
+cmin = min(Ifilt(:));
+
+set(handles.cmdReset,'enable','on');
+
+minpeak = str2num(get(handles.lblThreshInt,'string'));
+if minpeak<cmax
+    minpeak = minpeak + cmax/100;
+end
+set(handles.lblThreshInt,'string',num2str(round(minpeak,1)));
+
+ax = gca(); 
+imagesc(xscale,yscale,Ifilt);
+set(ax, 'YDir', 'normal')
+axis equal
+xlabel('Scale [nm]');
+colormap gray;
+cb = colorbar; 
+caxis([minpeak cmax])
+ylabel(cb,'counts')
+
+% --- Executes on button press in cmdXLarger.
+function cmdXLarger_Callback(hObject, eventdata, handles)
+% hObject    handle to cmdXLarger (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global Ifilt
+global xscale;
+global yscale;
+
+cmax = max(Ifilt(:));
+cmin = min(Ifilt(:));
+
+set(handles.cmdReset,'enable','on');
+
+minpeak = str2num(get(handles.lblThreshInt,'string'));
+if minpeak<cmax
+    minpeak = minpeak + cmax/10;
+end
+set(handles.lblThreshInt,'string',num2str(round(minpeak,1)));
+
+ax = gca(); 
+imagesc(xscale,yscale,Ifilt);
+set(ax, 'YDir', 'normal')
+axis equal
+xlabel('Scale [nm]');
+colormap gray;
+cb = colorbar; 
+caxis([minpeak cmax])
+ylabel(cb,'counts')
+
+% --- Executes on button press in cmdSmaller.
+function cmdXSmaller_Callback(hObject, eventdata, handles)
+% hObject    handle to cmdSmaller (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global Ifilt
+global xscale;
+global yscale;
+
+cmax = max(Ifilt(:));
+cmin = min(Ifilt(:));
+
+set(handles.cmdReset,'enable','on');
+
+minpeak = str2num(get(handles.lblThreshInt,'string'));
+if minpeak>cmin
+    minpeak = minpeak - cmax/10;
+end
+set(handles.lblThreshInt,'string',num2str(round(minpeak,1)));
+
+ax = gca(); 
+imagesc(xscale,yscale,Ifilt);
+set(ax, 'YDir', 'normal')
+axis equal
+xlabel('Scale [nm]');
+colormap gray;
+cb = colorbar; 
+caxis([minpeak cmax])
+ylabel(cb,'counts')
+
+% --- Executes on button press in cmdSmaller.
+function cmdSmaller_Callback(hObject, eventdata, handles)
+% hObject    handle to cmdSmaller (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global Ifilt
+global xscale;
+global yscale;
+
+cmax = max(Ifilt(:));
+cmin = min(Ifilt(:));
+
+set(handles.cmdReset,'enable','on');
+
+minpeak = str2num(get(handles.lblThreshInt,'string'));
+if minpeak>cmin
+    minpeak = minpeak - cmax/100;
+end
+set(handles.lblThreshInt,'string',num2str(round(minpeak,1)));
+
+ax = gca(); 
+imagesc(xscale,yscale,Ifilt);
+set(ax, 'YDir', 'normal')
+axis equal
+xlabel('Scale [nm]');
+colormap gray;
+cb = colorbar; 
+caxis([minpeak cmax])
+ylabel(cb,'counts')
+
+
+% --- Executes on button press in cmdResetBkint.
+function cmdResetBkint_Callback(hObject, eventdata, handles)
+% hObject    handle to cmdResetBkint (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global Ifilt;
+global BkgrdInt;
+
+Itemp=sort(Ifilt(:));
+nelm = round(length(Itemp)/20);
+BkgrdInt = mean(Itemp(1:nelm));
+set(handles.txtBackgroundInt,'string',num2str(BkgrdInt));
