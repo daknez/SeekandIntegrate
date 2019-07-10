@@ -270,10 +270,10 @@ end
 % mit der Computer Vision toobox:
 % hLocalMax = vision.LocalMaximaFinder;   % create the object
 % hLocalMax.MaximumNumLocalMaxima = 1000;    % amount of maximal point
-% hLocalMax.NeighborhoodSize = [minneighbourradius, minneighbourradius]; % Neighborhood Size
-% hLocalMax.Threshold = th;   % Threshold
+% hLocalMax.NeighborhoodSize = [minneighbourradius, minneighbourradius]; %?Neighborhood Size
+% hLocalMax.Threshold = th;   %?Threshold
 % 
-% location = step(hLocalMax, Ifilt); %Apply the object to the Image I. location is an nx2 matrix  containing the coordinates of the maxima in the image                                                               %matrix  containing the coordinates of the maxima in                                                             %the image 
+% location = step(hLocalMax, Ifilt); %Apply the object to the Image I. location is an nx2?matrix  containing the coordinates of the maxima in the image ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? %matrix ?containing the coordinates of the maxima in ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? %the image 
 % peakpxx = location(1,:);
 % peakpxy = location(2,:);
 %-----------------------------------------------
@@ -1852,6 +1852,6 @@ global Ifilt;
 global BkgrdInt;
 
 Itemp=sort(Ifilt(:));
-nelm = round(length(Itemp)/20);
+nelm = round(length(Itemp)/20);     % take lowest 5 % of the pixels
 BkgrdInt = mean(Itemp(1:nelm));
 set(handles.txtBackgroundInt,'string',num2str(BkgrdInt));
