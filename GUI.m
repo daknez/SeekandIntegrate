@@ -485,6 +485,8 @@ else  % evaluate all files in a folder (CheckBox Evaluate all files activated
         M = size(I,1);
         xscale = (0:N-1).*ps;
         yscale = (0:M-1).*ps;
+        
+        I = double(I);
 
         cmax = max(I(:));
         cmin = min(I(:));
@@ -557,7 +559,8 @@ else  % evaluate all files in a folder (CheckBox Evaluate all files activated
                     set(handles.cmdSaveFiltered,'enable','on');
             end
         
-            
+            I = double(I);
+             
             Ifilt_temp = imresize(Ifilt,1/binningfactor);
             Ifilt_temp(Ifilt_temp<minpeak)=0;
 
@@ -799,6 +802,8 @@ if file ~= 0
         return;
     end
 
+    I = double(I);
+    
     N = size(I,2);
     M = size(I,1);
     xscale = (0:N-1).*ps;
@@ -1818,15 +1823,17 @@ function cmdSmaller_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 global Ifilt
+global I
 global xscale;
 global yscale;
 
 cmax = max(Ifilt(:));
-cmin = min(Ifilt(:));
+cmin = min(Ifilt(:))
 
 set(handles.cmdReset,'enable','on');
 
-minpeak = str2num(get(handles.lblThreshInt,'string'));
+minpeak = double(str2num(get(handles.lblThreshInt,'string')));
+
 if minpeak>cmin
     minpeak = minpeak - cmax/100;
 end
