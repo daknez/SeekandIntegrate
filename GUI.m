@@ -142,99 +142,23 @@ choice = methodch{get(handles.chmethod,'Value')};
 minneighbourradius = round(str2num(get(handles.txtnearestn,'string')));
 
 switch choice
-    case 'Local Max'
+   case 'Local Max'
         % ---------------Method 1------------------------
         mask = true(minneighbourradius); mask(round(minneighbourradius/2),round(minneighbourradius/2)) = 0;
         peaks = Ifilt_temp > ordfilt2(Ifilt_temp,length(mask(mask==true)),mask);
         [peakpxy,peakpxx] = find(peaks==1);
         %------------------------------------------------
-
-% -------- Method 2: weighted centroid ---------
-% stats = regionprops(logical(Ifilt_temp),Ifilt_temp,'Area','WeightedCentroid')
-% rel_peaks_vec=[stats.Area]<=mean([stats.Area])+std(2*[stats.Area]);
-% cent = [stats(rel_peaks_vec).WeightedCentroid]';
-% peakpxy = cent(2:2:end);
-% peakpxx = cent(1:2:end);
-%-----------------------------------------------
-
-
-% -------- Method 3 ---------
-% sd=size(Ifilt_temp);
-% edg=3;
-% [x,y]=find(Ifilt_temp(edg:sd(1)-edg,edg:sd(2)-edg));
-% 
-% % initialize outputs
-% cent=[];%
-% cent_map=zeros(sd);
-% 
-% x=x+edg-1;
-% y=y+edg-1;
-% for j=1:length(y)
-%     if (Ifilt_temp(x(j),y(j))>=Ifilt_temp(x(j)-1,y(j)-1 )) &&...
-%             (Ifilt_temp(x(j),y(j))>Ifilt_temp(x(j)-1,y(j))) &&...
-%             (Ifilt_temp(x(j),y(j))>=Ifilt_temp(x(j)-1,y(j)+1)) &&...
-%             (Ifilt_temp(x(j),y(j))>Ifilt_temp(x(j),y(j)-1)) && ...
-%             (Ifilt_temp(x(j),y(j))>Ifilt_temp(x(j),y(j)+1)) && ...
-%             (Ifilt_temp(x(j),y(j))>=Ifilt_temp(x(j)+1,y(j)-1)) && ...
-%             (Ifilt_temp(x(j),y(j))>Ifilt_temp(x(j)+1,y(j))) && ...
-%             (Ifilt_temp(x(j),y(j))>=Ifilt_temp(x(j)+1,y(j)+1))
-% 
-%         %All these alternatives were slower...
-%         %if all(reshape( d(x(j),y(j))>=d(x(j)-1:x(j)+1,y(j)-1:y(j)+1),9,1))
-%         %if  d(x(j),y(j)) == max(max(d((x(j)-1):(x(j)+1),(y(j)-1):(y(j)+1))))
-%         %if  d(x(j),y(j))  == max(reshape(d(x(j),y(j))  >=  d(x(j)-1:x(j)+1,y(j)-1:y(j)+1),9,1))
-% 
-%         cent = [cent ;  y(j) ; x(j)];
-%         peakpxy = cent(2:2:end);
-%         peakpxx = cent(1:2:end);
-%         %cent_map(x(j),y(j))=cent_map(x(j),y(j))+1; % if a binary matrix output is desired
-% 
-%     end
-% end
-%--------------------------------------------
-
-% -------- Method 4 ---------
-% https://de.mathworks.com/matlabcentral/answers/219759-how-to-use-findpeaks-for-a-matrix-of-size-a
-% Px = {};
-% Py = {};
-% cent=[];
-% for k1 = 1:size(Ifilt_temp,1)
-%     [pks,loc] = findpeaks(Ifilt_temp(k1,:));
-%     Px{k1} =  loc;
-% end
-% for k1 = 1:size(Ifilt_temp,2)
-%     [pks,loc] = findpeaks(Ifilt_temp(:,k1));
-%     Py{k1} =  loc;
-% end
-% 
-% for i=1:length(Py)
-%     for j=1:length(Px)
-%         a=Px{j};
-%         b=Py{i};
-%         for k=1:length(Px{j})
-%             for l=1:length(Py{i})
-%                 %if abs((a(k)-b(l)))<=1
-%                 if a(k)==b(l)
-%                     cent = [cent ;  a(k) ; b(l)];
-%                 end
-%             end  
-%         end
-%     end
-% end
-% 
-% peakpxy = cent(2:2:end);
-% peakpxx = cent(1:2:end);
         
-%-------------------------------
-
   case 'Segmentation'
-    %--------- METHOD 5 ------------
     % Particle detection
     thrlevel = str2num(get(handles.lblThreshInt,'string')); %graythresh(blurredimage);
     %binaryImage = im2bw(Ifilt,thrlevel);
     binaryImage = imbinarize(Ifilt,thrlevel);
+    
+    figure
+    imagesc(binaryImage)
 
-    labeledImage = bwlabel(binaryImage, 8); % Label each blob so cando calc on it
+    labeledImage = bwlabel(binaryImage,8); % Label each blob so cando calc on it
     coloredLabels = label2rgb(labeledImage, 'hsv', 'k', 'shuffle'); %pseudo random color labels
 
     blobMeasurements = regionprops(labeledImage, 'all'); % Get all the blob properties.
@@ -252,31 +176,6 @@ switch choice
 
 %---------------------------------------------------
 end
-
-% 
-% [rr,cc] = meshgrid(1:size(Ifilt_temp,1),1:size(Ifilt_temp,2));
-% count = 1;
-% while count<10
-%     Imax = max(Ifilt_temp(:))       
-%     [psx,psy] = find(Ifilt_temp >= Imax-Imax*0.001,1);
-%     mask = logical(sqrt((rr-psx).^2+(cc-psy).^2)<=minneighbourradius);
-%     Ifilt_temp(mask) = 0;
-%     peakpxx(count) = psx; % = [peakpxx; psx];
-%     peakpxy(count) = psy; %[peakpxy; psy];
-%     count=count+1
-%     imagesc(Ifilt_temp);
-% end
-%-----------------------------------------------
-% mit der Computer Vision toobox:
-% hLocalMax = vision.LocalMaximaFinder;   % create the object
-% hLocalMax.MaximumNumLocalMaxima = 1000;    % amount of maximal point
-% hLocalMax.NeighborhoodSize = [minneighbourradius, minneighbourradius]; %?Neighborhood Size
-% hLocalMax.Threshold = th;   %?Threshold
-% 
-% location = step(hLocalMax, Ifilt); %Apply the object to the Image I. location is an nx2?matrix  containing the coordinates of the maxima in the image ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? %matrix ?containing the coordinates of the maxima in ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? %the image 
-% peakpxx = location(1,:);
-% peakpxy = location(2,:);
-%-----------------------------------------------
 
 disp('peak finding done!');
 
@@ -313,7 +212,6 @@ clear Ifilt_temp;
 set(handles.integrate,'enable','on');
 set(handles.txtmaxintrad,'enable','on');
 set(handles.lblmaxintrad,'enable','on');
-set(handles.cmdSaveMax,'enable','on');
 set(handles.pushbutton21,'enable','on');
 set(handles.txtBackgroundInt,'enable','on');
 set(handles.lblBackgroundInt,'enable','on');
@@ -321,6 +219,10 @@ set(handles.cmdResetBkint,'enable','on');
 
 set(handles.lblHist,'enable','on');
 set(handles.txtHistCat,'enable','on');
+
+set(handles.txtnearestn,'enable','on');
+set(handles.lblNearestN,'enable','on');
+set(handles.cmdOptimize,'enable','on');
 
 
 % --- Executes on button press in integrate.
@@ -353,308 +255,95 @@ global BkgrdInt;
 
 BkgrdInt = str2num(get(handles.txtBackgroundInt,'string'))
 
-if get(handles.chbEvaluateAll,'value') == 0 || length(filenames) == 1
+N = size(I,2);
+M = size(I,1);
+maxcellradius = str2num(get(handles.txtmaxintrad,'string'));
 
-    N = size(I,2);
-    M = size(I,1);
-    maxcellradius = str2num(get(handles.txtmaxintrad,'string'));
+% Assign each pixel to a voronoi cell based on its distance to the peak positions
+% according to: https://de.mathworks.com/matlabcentral/newsreader/view_thread/303167
+% [X,Y] = meshgrid(xyscale,xyscale);
+% [SX,XX] = ndgrid(peakx, X);
+% D2X = (SX-XX).^2;
+% clear SX XX
+% [SY,YY] = ndgrid(peaky, Y);
+% D2Y = (SY-YY).^2;
+% clear SY YY
+% D2 = D2X+D2Y;
+% %D2 = (SX-XX).^2+(SY-YY).^2;
+% clear D2X D2Y
+% [~, LOC] = min(D2, [], 1);
+% LOC = reshape(LOC, size(X));
 
-    % Assign each pixel to a voronoi cell based on its distance to the peak positions
-    % according to: https://de.mathworks.com/matlabcentral/newsreader/view_thread/303167
-    % [X,Y] = meshgrid(xyscale,xyscale);
-    % [SX,XX] = ndgrid(peakx, X);
-    % D2X = (SX-XX).^2;
-    % clear SX XX
-    % [SY,YY] = ndgrid(peaky, Y);
-    % D2Y = (SY-YY).^2;
-    % clear SY YY
-    % D2 = D2X+D2Y;
-    % %D2 = (SX-XX).^2+(SY-YY).^2;
-    % clear D2X D2Y
-    % [~, LOC] = min(D2, [], 1);
-    % LOC = reshape(LOC, size(X));
+disp('Assign pixels to cells...');
 
-
-    disp('Assign pixels to cells...');
+[img_height, img_width] = size(I);
+clear ind
+% if get(handles.chbIgnoreOutReg,'value')==1
     [img_height, img_width] = size(I);
-    clear ind
-    if get(handles.chbIgnoreOutReg,'value')==1
-        [img_height, img_width] = size(I);
-        ind = (peakpxx<img_width-maxcellradius) & (peakpxx-maxcellradius>0) & (peakpxy<img_height-maxcellradius) & (peakpxy-maxcellradius>0);
-        peakpxx_temp = peakpxx(ind);
-        peakpxy_temp = peakpxy(ind);
-        peakx_temp = peakx(ind);
-        peaky_temp = peaky(ind);
-        indOutsideregions = ind;
-    else
-        peakpxx_temp = peakpxx;
-        peakpxy_temp = peakpxy;
-        peakx_temp = peakx;
-        peaky_temp = peaky;
-        indOutsideregions = ones(1,length(peakx));
-    end
-    LOC = GetNearestPeaks(img_height, img_width, peakpxx_temp, peakpxy_temp);
-   
-    disp('Determine Intensities...');
+    ind = (peakpxx<img_width-maxcellradius) & (peakpxx-maxcellradius>0) & (peakpxy<img_height-maxcellradius) & (peakpxy-maxcellradius>0);
+    peakpxx_temp = peakpxx(ind);
+    peakpxy_temp = peakpxy(ind);
+    peakx_temp = peakx(ind);
+    peaky_temp = peaky(ind);
+    indOutsideregions = ind;
+% else
+%     peakpxx_temp = peakpxx;
+%     peakpxy_temp = peakpxy;
+%     peakx_temp = peakx;
+%     peaky_temp = peaky;
+%     indOutsideregions = ones(length(peakx),1);
+% end
+LOC = GetNearestPeaks(img_height, img_width, peakpxx_temp, peakpxy_temp);
 
-    % sum up all pixel intensities in each voroni cell: 
+disp('Determine Intensities...');
 
-    cellintensities = zeros(1,max(LOC(:)));
-    meancellintensities = zeros(1,max(LOC(:)));
-    integrationareas =  zeros(1,max(LOC(:)));
-    [rr,cc] = meshgrid(1:N,1:M);
-    cellintensityimage = zeros(size(I));
-   
-    for i=1:max(LOC(:)) 
-        cellmask = false(size(LOC));
-        cellmask(LOC==i)=true;
-        circlemask = logical(sqrt((rr-peakpxx_temp(i)).^2+(cc-peakpxy_temp(i)).^2)<=maxcellradius);
-        cellmask = cellmask & circlemask;
-        cellintensities(i) = sum(I(cellmask)-BkgrdInt);
-        cellintensityimage = cellintensityimage + cellmask.*cellintensities(i);
-        integrationareas(i) = length(cellmask(cellmask==true));
-        meancellintensities(i) = cellintensities(i)/length(cellmask(cellmask==true));
-    end
+% sum up all pixel intensities in each voroni cell: 
 
-    find(cellintensities==min(cellintensities(:)))
+cellintensities = zeros(1,max(LOC(:)));
+meancellintensities = zeros(1,max(LOC(:)));
+integrationareas =  zeros(1,max(LOC(:)));
+[rr,cc] = meshgrid(1:N,1:M);
+cellintensityimage = zeros(size(I));
+waitb = waitbar(0,'Determine intensities...');
 
-    ax = gca();
-    scatter(ax,peakx,peaky,'.')
-    xlim([0 max(xscale)])
-    ylim([0 max(yscale)])
-    caxis([0.9*min(cellintensities(cellintensities>0)) max(cellintensities(:))])
-    axis equal;
-    cb = colorbar;
-    ylabel(cb,'integrated intensity [counts]')
-    xlabel('scale [nm]')
-    colormap jet;
-    hold(ax, 'on');
-    imagesc(xscale,yscale,cellintensityimage);
-    voronoi(peakx, peaky,'w')
-    hold(ax, 'off');
-    set(gcf,'PaperPositionMode','auto')
-    print('temp','-dpng','-r0')
-
-    set(handles.cmdSaveHist,'enable','on');
-    set(handles.cmdPlotHist,'enable','on');
-    set(handles.cmdPlotResult,'enable','on');
-    
-else  % evaluate all files in a folder (CheckBox Evaluate all files activated
-   
-    for file = filenames
-        
-        [~,~,ext] = fileparts(file{1});
-        set(handles.txtpath,'string',file);
-        
-        if ext=='.tif'    
-            % Read from Image (TIF) -File
-            I = imread(strcat(filepath,file{1}));  
-
-            prompt = {'Enter pixel size in nm'};
-            pixelsize = inputdlg(prompt,'Enter pixel size',1,{'1'});
-            ps = str2num(pixelsize{:});
-            elseif ext=='.dm3'
-
-            % Import from DM3-File:
-            I_struct = DM3Import(strcat(filepath,file{1}));
-            disp(I_struct)
-
-            % Get size of image in pixels
-            I = I_struct.image_data .* I_struct.intensity.scale; % Scale from counts to electrons   
-            % Get pixel size (in nm)
-            ps = I_struct.xaxis.scale;
-            elseif ext=='.dm4'
-                [I, ps, units] = ReadDMFile(strcat(filepath,file{1}));
-                I = double(I');
-              
-            elseif ext=='.img'
-                [I,t,dx,dy] = binread2D(strcat(filepath,file{1}));
-                ps = dx;
-               
-            elseif ext=='.mat'
-                load(strcat(filepath,file{1}),'I','ps');
-            %     Itemp = zeros(512);
-            %     Itemp(1:size(I,1), 1:size(I,2)) = I;
-              %  I(~isfinite(I))=0;
-            else
-                msgbox('No File Selected');
-                return;
-        end
-
-        N = size(I,2);
-        M = size(I,1);
-        xscale = (0:N-1).*ps;
-        yscale = (0:M-1).*ps;
-        
-        I = double(I);
-
-        cmax = max(I(:));
-        cmin = min(I(:));
-        Imax = max(I(:));
-
-        Iorg = I; 
-        Ifilt = I;
-    
-        minpeak = str2num(get(handles.lblThreshInt,'string'));
-        
-        ax = gca(); 
-        imagesc(xscale,yscale,Ifilt);
-        set(ax, 'YDir', 'normal')
-        axis equal
-        xlabel('Scale [nm]');
-        colormap gray;
-        cb = colorbar; 
-        caxis([cmin cmax])
-        ylabel(cb,'counts')
-        set(gcf,'PaperPositionMode','auto')
-        print('temp','-dpng','-r0')
-        
-        filterch = get(handles.chfilter,'string');
-        choice = filterch{get(handles.chfilter,'Value')};
-        
-        binningfactor = str2num(get(handles.txtbinningf,'string'));
-        th = str2num(get(handles.lblThreshInt,'string'));
-
-        if get(handles.chbSameMax,'value')==0
-        
-            switch choice
-                case 'patchPCA'
-                    a=get(handles.pumPCAw,'string')% string in it entirety
-                    b=get(handles.pumPCAw,'value') % chosen value
-                    startw = str2double(a(b,:)) % chosen string as value
-                    %startw = str2num(get(handles.filterwidth,'string'));
-                    PCn = str2num(get(handles.txtfiltercomp,'string'));
-                    [Ifilt,~] = HirPatchPCA(I, startw, PCn, 1);
-
-                    ax = gca(); 
-                    imagesc(xscale,yscale,Ifilt);
-                    set(ax, 'YDir', 'normal')
-                    axis equal
-                    xlabel('Scale [nm]');
-                    colormap gray;
-                    cb = colorbar; 
-                    caxis([minpeak cmax])
-                    ylabel(cb,'counts')
-
-                    set(handles.cmdPlotFiltered,'enable','on');
-                    set(handles.cmdSaveFiltered,'enable','on');
-                case 'none'
-                    Ifilt = I;
-                case 'mean'
-                    w = str2num(get(handles.filterwidth,'string'));
-                    h = ones(w,w) / w^2;
-                    Ifilt = imfilter(I,h,'replicate');
-
-                    ax = gca();
-                    imagesc(xscale,yscale,Ifilt);
-                    set(ax, 'YDir', 'normal')
-                    axis equal
-                    xlabel('Scale [nm]');
-                    colormap gray;
-                    cb = colorbar; 
-                    caxis([minpeak cmax])
-                    ylabel(cb,'counts')
-
-                    set(handles.cmdPlotFiltered,'enable','on');
-                    set(handles.cmdSaveFiltered,'enable','on');
-            end
-        
-            I = double(I);
-             
-            Ifilt_temp = imresize(Ifilt,1/binningfactor);
-            Ifilt_temp(Ifilt_temp<minpeak)=0;
-
-            minneighbourradius = round(str2num(get(handles.txtnearestn,'string')));
-            % ----------------------------------------------
-            mask = true(minneighbourradius); mask(round(minneighbourradius/2),round(minneighbourradius/2)) = 0;
-            peaks = Ifilt_temp > ordfilt2(Ifilt_temp,length(mask(mask==true)),mask);
-            [peakpxy,peakpxx] = find(peaks==1);
-
-            disp('peak finding done!');
-
-            peakpxy = peakpxy.*binningfactor;
-            peakpxx = peakpxx.*binningfactor;
-            peakx = (peakpxx*ps-ps);
-            peaky = (peakpxy*ps-ps);
-        end
-        
-        [vx,vy] = voronoi(peakx,peaky);  % vx and vy contain the the finite vertices of the Voronoi edges
-        clear Ifilt_temp;
-        
-        disp('Assign pixels to cells...');
-        maxcellradius = str2num(get(handles.txtmaxintrad,'string'));
-        if get(handles.chbIgnoreOutReg,'value')==1
-            [img_height, img_width] = size(I);
-            ind = (peakpxx<img_width-maxcellradius) & (peakpxx-maxcellradius>0) & (peakpxy<img_height-maxcellradius) & (peakpxy-maxcellradius>0);
-            peakpxx = peakpxx(ind);
-            peakpxy = peakpxy(ind);
-            peakx = peakx(ind);
-            peaky = peaky(ind);
-        end
-
-        [img_height, img_width] = size(I);
-        LOC = GetNearestPeaks(img_height, img_width, peakpxx, peakpxy);
-
-        disp('Determine Intensities...');
-        % sum up all pixel intensities in each voroni cell: 
-        cellintensities = zeros(1,max(LOC(:)));
-        [rr,cc] = meshgrid(1:N);
-        cellintensityimage = zeros(size(I));
-        meancellintensities = zeros(1,max(LOC(:)));
-        integrationareas = zeros(1,max(LOC(:)));
-        
-        for i=1:max(LOC(:)) 
-            cellmask = false(size(LOC));
-            cellmask(LOC==i)=true;
-            circlemask = logical(sqrt((rr-peakpxx(i)).^2+(cc-peakpxy(i)).^2)<=maxcellradius);
-            cellmask = cellmask & circlemask;
-            cellintensities(i) = sum(I(cellmask)-BkgrdInt);
-            cellintensityimage = cellintensityimage + cellmask.*cellintensities(i);
-            integrationareas(i) = length(cellmask(cellmask==true));
-            meancellintensities(i) = cellintensities(i)/length(cellmask(cellmask==true));
-        end
-
-        find(cellintensities==min(cellintensities(:)));
-        
-        ax = gca();
-        scatter(ax,peakx,peaky,'.')
-        xlim([0 max(xscale)])
-        ylim([0 max(yscale)])
-        axis equal;
-        cb = colorbar;
-        ylabel(cb,'integrated intensity [counts]')
-        xlabel('scale [nm]')
-        colormap jet;
-        hold(ax, 'on');
-        himage = imagesc(xscale,yscale,cellintensityimage);
-        %himage.AlphaData = 0.3;
-        voronoi(peakx, peaky,'w')
-        title('cells with corresponding intensities');
-        %imagesc(xyscale,xyscale,Iorg);
-        hold(ax, 'off');
-        title('Integration result');
-
-        index = (1:length(peakx))';
-        Col_header = {'index','peak x coordinate [nm]','peak y coordinate [nm]','peak x coordinate [pixel]','peak y coordinate [pixel]','cell intensities [counts]', 'integration area [pixel]','mean cell intensity [counts/px]'};
-        [~, temp, ~] = fileparts(file{1});
-        if maxfile=='0' 
-            filesave = [filepath temp];
-        else
-            [~, tempmax, ~] = fileparts(maxfile);
-            filesave = [filepath temp '_' tempmax];
-        end
-        
-        disp(['write ' filesave '_results.xls']);
-        xlswrite([filesave '_results.xls'],[index(indOutsideregions), peakx(indOutsideregions), peaky(indOutsideregions), peakpxx(indOutsideregions), peakpxy(indOutsideregions), cellintensities' ,integrationareas', meancellintensities'],'Sheet1','A2'); % write data
-        xlswrite([filesave '_results.xls'],Col_header,'Sheet1','A1');     %Write column header
-        
-        disp(['write ' filesave '_resultfig.png']);
-        %savefig(gcf,[filepath file{1} '_resultfig.fig']);
-        saveas(gcf,[filesave '_resultfig.png']);
-        
-    end
-    msgbox('Evaluation finished.')
+for i=1:max(LOC(:)) 
+    waitbar(i/max(LOC(:)),waitb,'Determine intensities...');
+    cellmask = false(size(LOC));
+    cellmask(LOC==i)=true;
+    circlemask = logical(sqrt((rr-peakpxx_temp(i)).^2+(cc-peakpxy_temp(i)).^2)<=maxcellradius);
+    cellmask = cellmask & circlemask;
+    cellintensities(i) = sum(I(cellmask)-BkgrdInt);
+    cellintensityimage = cellintensityimage + cellmask.*cellintensities(i);
+    integrationareas(i) = length(cellmask(cellmask==true));
+    meancellintensities(i) = cellintensities(i)/length(cellmask(cellmask==true));
 end
+
+find(cellintensities==min(cellintensities(:)))
+
+delete(waitb);
+
+ax = gca();
+scatter(ax,peakx,peaky,'.')
+xlim([0 max(xscale)])
+ylim([0 max(yscale)])
+caxis([0.9*min(cellintensities(cellintensities>0)) max(cellintensities(:))])
+axis equal;
+cb = colorbar;
+ylabel(cb,'integrated intensity [counts]')
+xlabel('scale [nm]')
+colormap jet;
+hold(ax, 'on');
+imagesc(xscale,yscale,cellintensityimage);
+voronoi(peakx, peaky,'w')
+hold(ax, 'off');
+set(gcf,'PaperPositionMode','auto')
+print('temp','-dpng','-r0')
+
+set(handles.cmdSaveHist,'enable','on');
+set(handles.cmdPlotHist,'enable','on');
+set(handles.cmdPlotResult,'enable','on');
+set(handles.cmdSaveMax,'enable','on');
+
 
 % --- Executes on button press in filter.
 function filter_Callback(hObject, eventdata, handles)
@@ -670,6 +359,8 @@ binningfactor = str2num(get(handles.txtbinningf,'string'));
 
 cmax = max(I(:));
 cmin = min(I(:));
+N = size(I,2);
+M = size(I,1);
 minpeak = str2num(get(handles.lblThreshInt,'string'));
 
 filterch = get(handles.chfilter,'string');
@@ -681,7 +372,12 @@ switch choice
         startw = str2double(a(b,:)) % chosen string as value
         %startw = str2num(get(handles.filterwidth,'string'));
         PCn = str2num(get(handles.txtfiltercomp,'string'));
-        [Ifilt,~] = HirPatchPCA(I, startw, PCn, 1);
+        if mod(log(N)/log(2),1)==0
+            [Ifilt,~] = HirPatchPCA(I, startw, PCn, 1);
+        else
+            msgbox('Image dimensions must be power of 2 to apply this filter');
+            return;
+        end
         
         ax = gca(); 
         imagesc(xscale,yscale,Ifilt);
@@ -739,20 +435,7 @@ if exist('standardpath')==0
     standardpath = pwd;
 end
 
-if get(handles.chbReadFolder,'value') == 0
-    [file,filepath] = uigetfile({'*.dm3';'*.dm4';'*.img';'*.tif';'*.mat'},'Select file',standardpath);
-else
-    filepath = uigetdir(standardpath,'Select folder');
-    filepath = [filepath '\'];
-    fnames = [dir([filepath '\*.dm3']);dir([filepath '\*.img'])];
-%   numfids = length(fnames);
-%     vals = cell(1,numfids);
-%     for K = 1:numfids
-%         vals{K} = load(fnames(K).name);
-%     end
-    filenames = {fnames.name};%strcat(path,{fnames.name});
-    file = [fnames(1).name];
-end
+[file,filepath] = uigetfile({'*.dm3';'*.dm4';'*.img';'*.tif';'*.mat'},'Select file',standardpath);
 
 if file ~= 0
 
@@ -865,25 +548,20 @@ if file ~= 0
     set(handles.cmdInvert,'enable','on');
     set(handles.cmdReadPeakCoords,'enable','on');
     set(handles.cmdAddMan,'enable','on');
-    %set(handles.cmdOptimize,'enable','on');
 
     set(handles.lblHist,'enable','off');
     set(handles.lblThrInt,'enable','on');
+    set(handles.text13,'enable','on');
     set(handles.lblbinfac,'enable','on');
     set(handles.lblNearestN,'enable','on');
     set(handles.txtHistCat,'enable','off');
-    if get(handles.chbReadFolder,'Value') == 0 
-        set(handles.chbSameMax,'enable','off');
-    else
-        set(handles.chbSameMax,'enable','on');
-    end
 
     set(handles.txtpath,'string',file);
-    set(handles.chbEvaluateAll,'value',0)
     set(handles.lblThreshInt,'string',num2str(round(mean(I(:)))));
     %set(handles.sldThreshInt, 'SliderStep', [1/Imax , 10/Imax ]);
 
 end
+
 % --- Executes on selection change in chfilter.
 function chfilter_Callback(hObject, eventdata, handles)
 % hObject    handle to chfilter (see GCBO)
@@ -1167,8 +845,22 @@ function cmdReset_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 global I;
+global Ifilt;
 
-set(handles.lblThreshInt,'string',num2str(round(mean(I(:)))));
+minpeak = mean(I(:));
+cmax = max(Ifilt(:));
+
+ax = gca(); 
+imagesc(xscale,yscale,Ifilt);
+set(ax, 'YDir', 'normal')
+axis equal
+xlabel('Scale [nm]');
+colormap gray;
+cb = colorbar; 
+caxis([minpeak cmax])
+ylabel(cb,'counts')
+
+set(handles.lblThreshInt,'string',num2str(round(minpeak)));
 set(handles.cmdReset,'enable','off');
 
 
@@ -1320,6 +1012,7 @@ global filepath;
 global meancellintensities;
 global integrationareas;
 global indOutsideregions;
+global GaussFits;
 
 standardpath = filepath;
 
@@ -1330,9 +1023,15 @@ if filename ~= 0
     if ext == '.csv' 
         csvwrite([pathname, filename],[index(indOutsideregions), peakx(indOutsideregions), peaky(indOutsideregions), peakpxx(indOutsideregions), peakpxy(indOutsideregions), cellintensities']);
     elseif ext == '.xls'
-        Col_header = {'index','peak x coordinate [nm]','peak y coordinate [nm]','peak x coordinate [pixel]','peak y coordinate [pixel]','cell intensities [counts]','integration area [pixel]','mean cell intensities [counts/pixel]'};
-        xlswrite([pathname, filename],[index(indOutsideregions), peakx(indOutsideregions), peaky(indOutsideregions), peakpxx(indOutsideregions), peakpxy(indOutsideregions), cellintensities',integrationareas', meancellintensities'],'Sheet1','A2'); % write data
-        xlswrite([pathname, filename],Col_header,'Sheet1','A1');     %Write column header
+        if length(meancellintensities)>0
+            Col_header = {'index','peak x coordinate [nm]','peak y coordinate [nm]','peak x coordinate [pixel]','peak y coordinate [pixel]','cell intensities [counts]','integration area [pixel]','mean cell intensities [counts/pixel]'};
+            xlswrite([pathname, filename],[index(indOutsideregions), peakx(indOutsideregions), peaky(indOutsideregions), peakpxx(indOutsideregions), peakpxy(indOutsideregions), cellintensities',integrationareas', meancellintensities'],'Sheet1','A2'); % write data
+            xlswrite([pathname, filename],Col_header,'Sheet1','A1')     %Write column header
+        else
+            Col_header = {'index','peak x coordinate [nm]','peak y coordinate [nm]','peak x coordinate [pixel]','peak y coordinate [pixel]','integrated Gauss intensities [counts]','Gauss fitting constant A','Gauss fitting constant sigma_1','Gauss fitting constant sigma_2','Gauss fitting constant tilt angle'};
+            xlswrite([pathname, filename],[index(indOutsideregions), peakx(indOutsideregions), peaky(indOutsideregions), peakpxx(indOutsideregions), peakpxy(indOutsideregions), cellintensities,GaussFits(:,1),GaussFits(:,3),GaussFits(:,5),GaussFits(:,6)],'Sheet1','A2'); % write data
+            xlswrite([pathname, filename],Col_header,'Sheet1','A1')     %Write column header
+        end
     end
 end
 % --- Executes on button press in cmdSaveHist.
@@ -1364,7 +1063,7 @@ global cellintensities;
 
 histogramvalues = str2num(get(handles.txtHistCat,'string'));
 figcellintenshist = figure;
-histogram(cellintensities,histogramvalues);
+histogram(cellintensities,histogramvalues)
 set(figcellintenshist,'DefaultAxesFontName', 'Arial', 'DefaultAxesFontSize', 16, 'DefaultAxesFontWeight', 'Demi' );
 xlabel('integrated intensity [counts]')
 ylabel('occurence')
@@ -1519,36 +1218,6 @@ caxis([minpeak cmax])
 ylabel(cb,'counts')
 
 
-% --- Executes on button press in chbReadFolder.
-function chbReadFolder_Callback(hObject, eventdata, handles)
-% hObject    handle to chbReadFolder (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of chbReadFolder
-
-if get(handles.chbReadFolder,'value') == 1 
-    set(handles.chbEvaluateAll,'enable','on');
-else
-    set(handles.chbEvaluateAll,'enable','off');
-    set(handles.chbSameMax,'enable','off');
-end
-
-% --- Executes on button press in chbEvaluateAll.
-function chbEvaluateAll_Callback(hObject, eventdata, handles)
-% hObject    handle to chbEvaluateAll (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of chbEvaluateAll
-
-if get(handles.chbEvaluateAll,'value') == 1
-    set(handles.chbSameMax,'enable','on');
-else
-    set(handles.chbSameMax,'enable','off');
-end
-
-
 % --- Executes on button press in cmdAddMan.
 function cmdAddMan_Callback(hObject, eventdata, handles)
 % hObject    handle to cmdAddMan (see GCBO)
@@ -1622,8 +1291,8 @@ while stop == false;
         stop = true;
     end
     
-    peakx = double(peakpxx.*ps);
-    peaky = double(peakpxy.*ps);
+    peakx = double(peakpxx*ps-ps);
+    peaky = double(peakpxy*ps-ps);
     
     refreshdata(pl1,'caller')
     refreshdata(pl2,'caller')
@@ -1655,7 +1324,11 @@ function cmdOptimize_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-global Ifilt
+clear meancellintensities
+clear integrationareas
+clear indOutsideregions
+
+global Iorg;
 global xscale;
 global yscale;
 global peakpxx;
@@ -1663,32 +1336,101 @@ global peakpxy;
 global peakx;
 global peaky;
 global ps;
+global GaussFits;
+global cellintensities;
+global meancellintensities;
+global integrationareas;
+global indOutsideregions;
 
-cmax = max(Ifilt(:));
-m = size(Ifilt,1);
-n = size(Ifilt,2);
-data = double(Ifilt);
+cmax = max(Iorg(:));
+minpeak = str2num(get(handles.lblThreshInt,'string'));
+[img_height, img_width] = size(Iorg);
 
-% Coeficients A convention:
-%	A = [Amplitude, x0, x-Width, y0, y-Width]
-g = @(A,X) A(1)*exp( -((X(:,:,1)-A(2)).^2/(2*A(3)^2) + (X(:,:,2)-A(4)).^2/(2*A(5)^2)) );
+BkgrdInt = str2num(get(handles.txtBackgroundInt,'string'));
+minneighbourradius = round(str2num(get(handles.txtnearestn,'string')));
+binningfactor = str2num(get(handles.txtbinningf,'string'));
+LOC = GetNearestPeaks(img_height, img_width, peakpxx, peakpxy);
+oldpeakx = peakx;
+oldpeaky = peaky;
+oldpeakpxx = peakpxx;
+oldpeakpxy = peakpxy;
 
-i = 1;
-A0 = double([cmax,peakpxx(i),10,peakpxy(i),10]);   % Inital (guess) parameters
-InterpMethod='nearest'; % 'nearest','linear','spline','cubic'
+%if exist('cellintensities'); clear cellintensities; end
 
-lb = double([0,peakpxx(i)-10,0,peakpxy(i)-10,0]);
-ub = double([cmax,peakpxx(i)+10,10,peakpxy(i)+10,10]);
+[GaussFits,Iall,Ires,~] = Gauss2D(Iorg,oldpeakpxx,oldpeakpxy,LOC,BkgrdInt,minneighbourradius);
 
-%% ---Build numerical Grids---
-% Numerical Grid
-[x,y]=meshgrid(-n/2:n/2,-m/2:m/2); 
-X=zeros(m,n,2); 
-X(:,:,1)=x; 
-X(:,:,2)=y;
+peakpxx = zeros(size(GaussFits,1),1);
+peakpxx(peakpxx>0)=[];
+peakpxy = zeros(size(GaussFits,1),1);
+peakpxy(peakpxy>0)=[];
+peakx = zeros(size(GaussFits,1),1);
+peakx(peakx>0)=[];
+peaky = zeros(size(GaussFits,1),1);
+peaky(peaky>0)=[];
 
-[A,resnorm,res,flag,output] = lsqcurvefit(g,A0,X,data,lb,ub);
+peakpxx = GaussFits(:,2);
+peakpxy = GaussFits(:,4);
+peakx = double(peakpxx*ps-ps);
+peaky = double(peakpxy*ps-ps);
 
+cellintensities = zeros(size(GaussFits,1),1);
+cellintensities(cellintensities>0)=[];
+
+for i=1:size(GaussFits,1)
+    %calculate Intensities:
+    cellintensities(i) = 2*GaussFits(i,1)*GaussFits(i,3)*GaussFits(i,5)*pi;
+    %cellintensities(i) = GaussFits(i,1);
+end
+
+ax = gca(); 
+%pl2 = imagesc(xscale,yscale,Iorg);
+p12 = scatter(ax,peakx,peaky,[],cellintensities,'filled');
+hold on
+[vx,vy] = voronoi(peakx,peaky);
+pl1 = plot(peakx,peaky,'w.',vx,vy,'k-');
+hold off
+axis equal
+xlabel('Scale [nm]');
+colormap default;
+cb = colorbar; 
+%caxis([minpeak cmax])
+ylim([min(xscale) max(xscale)]);
+xlim([min(yscale) max(yscale)]);
+ylabel(cb,'counts')
+view(0,-90);
+
+
+figure;
+imagesc(xscale,yscale,Iall);
+view(0,-90);
+%voronoi(peakpxx,peakpxy,'w')
+%scatter(GaussFits(:,2),GaussFits(:,4),20)
+hold on
+plot(peakx,peaky,'w+');
+plot(oldpeakx,oldpeaky,'ro');
+hold off
+axis square
+colorbar
+set(ax, 'YDir', 'reverse')
+
+% figure;
+% imagesc(xscale,yscale,Ires);
+% hold on
+% plot(peakx,peaky,'w+');
+% plot(oldpeakx,oldpeaky,'ro')
+% hold off
+% axis square
+% view(0,-90);
+% colorbar
+
+meancellintensities = [];
+integrationareas = [];
+indOutsideregions = true(size(GaussFits,1),1);
+
+set(handles.cmdSaveHist,'enable','on');
+set(handles.cmdPlotHist,'enable','on');
+set(handles.cmdOptimize,'enable','off');
+set(handles.cmdSaveMax,'enable','on');
 
 % --- Executes during object creation, after setting all properties.
 function chmethod_CreateFcn(hObject, eventdata, handles)
@@ -1743,7 +1485,7 @@ set(handles.cmdReset,'enable','on');
 
 minpeak = str2num(get(handles.lblThreshInt,'string'));
 if minpeak<cmax
-    minpeak = minpeak + cmax/100;
+    minpeak = minpeak + cmax/200;
 end
 set(handles.lblThreshInt,'string',num2str(round(minpeak,1)));
 
@@ -1773,7 +1515,7 @@ set(handles.cmdReset,'enable','on');
 
 minpeak = str2num(get(handles.lblThreshInt,'string'));
 if minpeak<cmax
-    minpeak = minpeak + cmax/10;
+    minpeak = minpeak + cmax/20;
 end
 set(handles.lblThreshInt,'string',num2str(round(minpeak,1)));
 
@@ -1803,7 +1545,7 @@ set(handles.cmdReset,'enable','on');
 
 minpeak = str2num(get(handles.lblThreshInt,'string'));
 if minpeak>cmin
-    minpeak = minpeak - cmax/10;
+    minpeak = minpeak - cmax/20;
 end
 set(handles.lblThreshInt,'string',num2str(round(minpeak,1)));
 
@@ -1835,7 +1577,7 @@ set(handles.cmdReset,'enable','on');
 minpeak = double(str2num(get(handles.lblThreshInt,'string')));
 
 if minpeak>cmin
-    minpeak = minpeak - cmax/100;
+    minpeak = minpeak - cmax/200;
 end
 set(handles.lblThreshInt,'string',num2str(round(minpeak,1)));
 

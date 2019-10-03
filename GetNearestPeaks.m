@@ -10,10 +10,15 @@ num_sectors = ceil( [img_height, img_width] ./ MaxSecRange );
 secs_limits1 = [0, round( img_height/num_sectors(1) * (1:num_sectors(1)) )];
 secs_limits2 = [0, round( img_width/num_sectors(2) * (1:num_sectors(2)) )];
 
+waitb = waitbar(0,'Assign pixels to Voronoi cells');
+
 % loop init
 NearestPeaks = [];
 for m = 1:numel(secs_limits1)-1
     RowOfPeaks = [];
+   
+    waitbar(m/(numel(secs_limits1)-1),waitb,'Assign pixels to Voronoi cells');
+    
     for n = 1:numel(secs_limits2)-1
         y = secs_limits1(m)+1 : secs_limits1(m+1);
         x = secs_limits2(n)+1 : secs_limits2(n+1);
@@ -31,5 +36,8 @@ for m = 1:numel(secs_limits1)-1
     NearestPeaks = [NearestPeaks; RowOfPeaks];
 end
 
+delete(waitb);
+
 end
+
 
