@@ -22,7 +22,7 @@ function varargout = GUI(varargin)
 
 % Edit the above text to modify the response to help GUI
 
-% Last Modified by GUIDE v2.5 17-Jun-2019 21:03:23
+% Last Modified by GUIDE v2.5 04-Oct-2019 13:46:36
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -199,7 +199,7 @@ xlim([0 max(xscale)])
 ylim([0 max(yscale)])
 axis equal;
 xlabel('Scale [nm]');
-colormap jet;
+colormap default;
 cb = colorbar; 
 ylabel(cb,'pixel intensity [counts]')
 hold(ax, 'on');
@@ -215,6 +215,8 @@ set(handles.lblmaxintrad,'enable','on');
 set(handles.pushbutton21,'enable','on');
 set(handles.txtBackgroundInt,'enable','on');
 set(handles.lblBackgroundInt,'enable','on');
+set(handles.lblFitMethod,'enable','on');
+set(handles.chFitMethod,'enable','on');
 set(handles.cmdResetBkint,'enable','on');
 
 set(handles.lblHist,'enable','on');
@@ -331,7 +333,7 @@ axis equal;
 cb = colorbar;
 ylabel(cb,'integrated intensity [counts]')
 xlabel('scale [nm]')
-colormap jet;
+colormap default;
 hold(ax, 'on');
 imagesc(xscale,yscale,cellintensityimage);
 voronoi(peakx, peaky,'w')
@@ -435,7 +437,7 @@ if exist('standardpath')==0
     standardpath = pwd;
 end
 
-[file,filepath] = uigetfile({'*.dm3';'*.dm4';'*.img';'*.tif';'*.mat'},'Select file',standardpath);
+[file,filepath] = uigetfile({'*.dm4';'*.dm3';'*.img';'*.tif';'*.mat'},'Select file',standardpath);
 
 if file ~= 0
 
@@ -535,6 +537,8 @@ if file ~= 0
     set(handles.lblmaxintrad,'enable','off');
     set(handles.txtBackgroundInt,'enable','off');
     set(handles.lblBackgroundInt,'enable','off');
+    set(handles.lblFitMethod,'enable','off');
+    set(handles.chFitMethod,'enable','off');
     set(handles.cmdResetBkint,'enable','off');
     set(handles.cmdReset,'enable','off');
     set(handles.pumPCAw,'visible','off');
@@ -972,7 +976,7 @@ axis equal;
 cb = colorbar;
 ylabel(cb,'integrated intensity [counts]')
 xlabel('scale [nm]')
-colormap jet;
+colormap default;
 hold(ax, 'on');
 imagesc(xscale,yscale,cellintensityimage);
 caxis([min(cellintensityimage(cellintensityimage~=0)) max(cellintensityimage(:))]);
@@ -990,6 +994,7 @@ function cmdSaveFiltered_Callback(hObject, eventdata, handles)
 
 % Hint: get(hObject,'Value') returns toggle state of cmdSaveFiltered
 global Ifilt;
+global standardpath;
 
 [filename, pathname] = uiputfile({'*.tif';'*.*'},'Save as 32-bit data tif file',standardpath);
 if filename ~= 0
@@ -1016,7 +1021,7 @@ global GaussFits;
 
 standardpath = filepath;
 
-[filename, pathname] = uiputfile({'*.xls';'*.csv';'*.*'},'Save as ...',standardpath);
+[filename, pathname] = uiputfile({'*.xls';'*.csv';'*.mat';'*.*'},'Save as ...',standardpath);
 if filename ~= 0
     [~,~,ext] = fileparts(filename);
     index = (1:length(peakx))';
@@ -1031,6 +1036,12 @@ if filename ~= 0
             Col_header = {'index','peak x coordinate [nm]','peak y coordinate [nm]','peak x coordinate [pixel]','peak y coordinate [pixel]','integrated Gauss intensities [counts]','Gauss fitting constant A','Gauss fitting constant sigma_1','Gauss fitting constant sigma_2','Gauss fitting constant tilt angle'};
             xlswrite([pathname, filename],[index(indOutsideregions), peakx(indOutsideregions), peaky(indOutsideregions), peakpxx(indOutsideregions), peakpxy(indOutsideregions), cellintensities,GaussFits(:,1),GaussFits(:,3),GaussFits(:,5),GaussFits(:,6)],'Sheet1','A2'); % write data
             xlswrite([pathname, filename],Col_header,'Sheet1','A1')     %Write column header
+        end
+    elseif ext == '.mat'
+        if length(meancellintensities)>0
+            save([pathname, filename],'index', 'peakx','peaky','peakpxx','peakpxy','cellintensities','integrationareas','meancellintensities','indOutsideregions');
+        else
+            save([pathname, filename],'index','peakx', 'peaky', 'peakpxx', 'peakpxy', 'cellintensities','GaussFits','indOutsideregions');           
         end
     end
 end
@@ -1149,7 +1160,7 @@ xlim([0 max(xscale)])
 ylim([0 max(yscale)])
 axis equal;
 xlabel('Scale [nm]');
-colormap jet;
+colormap default;
 cb = colorbar; 
 ylabel(cb,'pixel intensity [counts]')
 hold(ax, 'on');
@@ -1169,6 +1180,8 @@ set(handles.cmdSaveMax,'enable','on');
 set(handles.pushbutton21,'enable','on');
 set(handles.lblBackgroundInt,'enable','on');
 set(handles.txtBackgroundInt,'enable','on');
+set(handles.lblFitMethod,'enable','on');
+set(handles.chFitMethod,'enable','on');
 set(handles.cmdResetBkint,'enable','on');
 
 set(handles.lblHist,'enable','on');
@@ -1239,6 +1252,22 @@ m = size(Ifilt,1);
 n = size(Ifilt,2);
 minpeak = str2num(get(handles.lblThreshInt,'string'))
 binningfactor = str2num(get(handles.txtbinningf,'string'));
+togglecolor = true;
+
+
+editpointsfig = figure;
+imagesc(xscale,yscale,Ifilt);
+hold on
+[vx,vy] = voronoi(peakx,peaky);
+plot(peakx,peaky,'r.',vx,vy,'k-');
+hold off
+axis square
+view(0,-90);
+colorbar
+xlabel('Scale [nm]');
+colormap default;
+ylim([min(xscale) max(xscale)]);
+xlim([min(yscale) max(yscale)]);
 
 ax = gca(); 
 pl2 = imagesc(xscale,yscale,Ifilt);
@@ -1250,7 +1279,7 @@ hold off
 set(ax, 'YDir', 'normal')
 axis equal
 xlabel('Scale [nm]');
-colormap jet;
+colormap default;
 cb = colorbar; 
 caxis([minpeak cmax])
 ylim([min(xscale) max(xscale)]);
@@ -1260,7 +1289,7 @@ ylabel(cb,'counts')
 set(pl1,'YDataSource','peaky','XDataSource','peakx')
 
 stop = false;
-while stop == false;
+while stop == false
     
     [px,py,key] = ginput(1)
     
@@ -1285,8 +1314,16 @@ while stop == false;
         
         %find the smallest distance and use that as an index:
         ind = find(distances==min(distances));
-        peakpxx(ind) = [];
+        peakpxx(ind) = [];    
         peakpxy(ind) = [];
+        
+    elseif key == 32 %space bar toggles color of markers
+        togglecolor = true - togglecolor;
+        if togglecolor == true
+            set(pl1,'Color','w')
+        else
+            set(pl1,'Color','k')
+        end
     else
         stop = true;
     end
@@ -1300,13 +1337,15 @@ while stop == false;
 
 end
 
+delete(editpointsfig)
+
 ax = gca();
 scatter(ax,peakx,peaky,'.')
 xlim([0 max(xscale)])
 ylim([0 max(yscale)])
 axis equal;
 xlabel('Scale [nm]');
-colormap jet;
+colormap default;
 cb = colorbar; 
 ylabel(cb,'pixel intensity [counts]')
 hold(ax, 'on');
@@ -1344,7 +1383,7 @@ global indOutsideregions;
 
 cmax = max(Iorg(:));
 minpeak = str2num(get(handles.lblThreshInt,'string'));
-[img_height, img_width] = size(Iorg);
+[img_height,img_width] = size(Iorg)
 
 BkgrdInt = str2num(get(handles.txtBackgroundInt,'string'));
 minneighbourradius = round(str2num(get(handles.txtnearestn,'string')));
@@ -1356,8 +1395,16 @@ oldpeakpxx = peakpxx;
 oldpeakpxy = peakpxy;
 
 %if exist('cellintensities'); clear cellintensities; end
+fitmethodch = get(handles.chFitMethod,'string');
+choice = fitmethodch{get(handles.chFitMethod,'Value')};
 
-[GaussFits,Iall,Ires,~] = Gauss2D(Iorg,oldpeakpxx,oldpeakpxy,LOC,BkgrdInt,minneighbourradius);
+switch choice
+   case 'Full'
+       [GaussFits,Iall,Ires,~] = Gauss2D(Iorg,oldpeakpxx,oldpeakpxy,LOC,BkgrdInt,minneighbourradius,'fit1');
+    case 'sig1=sig2'
+       [GaussFits,Iall,Ires,~] = Gauss2D(Iorg,oldpeakpxx,oldpeakpxy,LOC,BkgrdInt,minneighbourradius,'dont');
+end
+% [GaussFits,Iall,Ires,~] = Gauss2D(imresize(Iorg,1/binningfactor),oldpeakpxx,oldpeakpxy,LOC,BkgrdInt,minneighbourradius);
 
 peakpxx = zeros(size(GaussFits,1),1);
 peakpxx(peakpxx>0)=[];
@@ -1367,6 +1414,7 @@ peakx = zeros(size(GaussFits,1),1);
 peakx(peakx>0)=[];
 peaky = zeros(size(GaussFits,1),1);
 peaky(peaky>0)=[];
+
 
 peakpxx = GaussFits(:,2);
 peakpxy = GaussFits(:,4);
@@ -1378,7 +1426,7 @@ cellintensities(cellintensities>0)=[];
 
 for i=1:size(GaussFits,1)
     %calculate Intensities:
-    cellintensities(i) = 2*GaussFits(i,1)*GaussFits(i,3)*GaussFits(i,5)*pi;
+    cellintensities(i) = 2*pi*GaussFits(i,1)*GaussFits(i,3)*GaussFits(i,5);
     %cellintensities(i) = GaussFits(i,1);
 end
 
@@ -1394,34 +1442,34 @@ xlabel('Scale [nm]');
 colormap default;
 cb = colorbar; 
 %caxis([minpeak cmax])
-ylim([min(xscale) max(xscale)]);
-xlim([min(yscale) max(yscale)]);
+ylim([min(yscale) max(yscale)]);
+xlim([min(xscale) max(xscale)]);
 ylabel(cb,'counts')
-view(0,-90);
+%view(0,-90);
 
 
 figure;
 imagesc(xscale,yscale,Iall);
-view(0,-90);
+% view(0,-90);
 %voronoi(peakpxx,peakpxy,'w')
 %scatter(GaussFits(:,2),GaussFits(:,4),20)
 hold on
 plot(peakx,peaky,'w+');
 plot(oldpeakx,oldpeaky,'ro');
 hold off
-axis square
+axis equal
 colorbar
 set(ax, 'YDir', 'reverse')
 
-% figure;
-% imagesc(xscale,yscale,Ires);
-% hold on
-% plot(peakx,peaky,'w+');
-% plot(oldpeakx,oldpeaky,'ro')
-% hold off
-% axis square
-% view(0,-90);
-% colorbar
+figure;
+imagesc(xscale,yscale,Ires);
+hold on
+plot(peakx,peaky,'w+');
+plot(oldpeakx,oldpeaky,'ro')
+hold off
+axis equal
+%view(0,-90);
+colorbar
 
 meancellintensities = [];
 integrationareas = [];
@@ -1604,3 +1652,26 @@ Itemp=sort(Ifilt(:));
 nelm = round(length(Itemp)/20);     % take lowest 5 % of the pixels
 BkgrdInt = mean(Itemp(1:nelm));
 set(handles.txtBackgroundInt,'string',num2str(BkgrdInt));
+
+
+% --- Executes on selection change in chFitMethod.
+function chFitMethod_Callback(hObject, eventdata, handles)
+% hObject    handle to chFitMethod (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns chFitMethod contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from chFitMethod
+
+
+% --- Executes during object creation, after setting all properties.
+function chFitMethod_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to chFitMethod (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
