@@ -199,6 +199,7 @@ xlim([0 max(xscale)])
 ylim([0 max(yscale)])
 axis equal;
 xlabel('Scale [nm]');
+%colormap default;
 colormap default;
 cb = colorbar; 
 ylabel(cb,'pixel intensity [counts]')
@@ -498,13 +499,13 @@ if file ~= 0
     cmin = min(I(:));
     Imax = max(I(:));
 
-    if Imax<1
-        I = I .*1000;
-        
-        cmax = max(I(:));
-        cmin = min(I(:));
-        Imax = max(I(:));
-    end
+%     if Imax<1
+%         I = I .*1000;
+%         
+%         cmax = max(I(:));
+%         cmin = min(I(:));
+%         Imax = max(I(:));
+%     end
     
     Iorg = I;
     Ifilt = I;
@@ -966,25 +967,41 @@ global peaky;
 global xscale;
 global yscale;
 global cellintensityimage;
+global cellintensities;
+global indOutsideregions;
+
+% normalize:
+%normcellint = (cellintensities- min(cellintensities(:))) ./ (max(cellintensities(:)) - min(cellintensities(:)));
+normcellint = cellintensities./max(cellintensities(:));
 
 figResult = figure;
 ax = gca();
-scatter(ax,peakx,peaky,'.')
+scatter(ax,peakx(indOutsideregions),peaky(indOutsideregions),150,normcellint,'filled') %250
+
 xlim([0 max(xscale)])
 ylim([0 max(yscale)])
-axis equal;
+axis square;
 cb = colorbar;
-ylabel(cb,'integrated intensity [counts]')
-xlabel('scale [nm]')
+ylabel(cb,'normalized integrated intensity')
+%xlabel('scale [nm]')
 colormap default;
 hold(ax, 'on');
-imagesc(xscale,yscale,cellintensityimage);
-caxis([min(cellintensityimage(cellintensityimage~=0)) max(cellintensityimage(:))]);
-voronoi(peakx, peaky,'w')
-title('cells with corresponding intensities');
+%imagesc(xscale,yscale,cellintensityimage);
+% caxis([min(cellintensityimage(cellintensityimage~=0)) max(cellintensityimage(:))]);
+caxis([min(normcellint(:)) 1]);
+%voronoi(peakx, peaky,'w')
+
+[vx,vy] = voronoi(peakx,peaky);
+%plot(peakx,peaky,'r.',vx,vy,'k-');
+plot(peakx,peaky,'w.');
+
 hold(ax, 'off');
 
-title('Integration result');
+set(gca,'XTickLabel',[]);
+set(gca,'YTickLabel',[]);
+set(gca,'xtick',[])
+set(gca,'ytick',[])
+%title('Integration result');
 
 % --- Executes on button press in cmdSaveFiltered.
 function cmdSaveFiltered_Callback(hObject, eventdata, handles)
@@ -1033,8 +1050,8 @@ if filename ~= 0
             xlswrite([pathname, filename],[index(indOutsideregions), peakx(indOutsideregions), peaky(indOutsideregions), peakpxx(indOutsideregions), peakpxy(indOutsideregions), cellintensities',integrationareas', meancellintensities'],'Sheet1','A2'); % write data
             xlswrite([pathname, filename],Col_header,'Sheet1','A1')     %Write column header
         else
-            Col_header = {'index','peak x coordinate [nm]','peak y coordinate [nm]','peak x coordinate [pixel]','peak y coordinate [pixel]','integrated Gauss intensities [counts]','Gauss fitting constant A','Gauss fitting constant sigma_1','Gauss fitting constant sigma_2','Gauss fitting constant tilt angle'};
-            xlswrite([pathname, filename],[index(indOutsideregions), peakx(indOutsideregions), peaky(indOutsideregions), peakpxx(indOutsideregions), peakpxy(indOutsideregions), cellintensities,GaussFits(:,1),GaussFits(:,3),GaussFits(:,5),GaussFits(:,6)],'Sheet1','A2'); % write data
+            Col_header = {'index','peak x coordinate [nm]','peak y coordinate [nm]','peak x coordinate [pixel]','peak y coordinate [pixel]','integrated Gauss intensities [counts]','Gauss fitting constant A','Gauss fitting constant sigma_1','Gauss fitting constant sigma_2','Gauss fitting constant tilt angle','Squared norm of the residual'};
+            xlswrite([pathname, filename],[index(indOutsideregions), peakx(indOutsideregions), peaky(indOutsideregions), peakpxx(indOutsideregions), peakpxy(indOutsideregions), cellintensities,GaussFits(:,1),GaussFits(:,3),GaussFits(:,5),GaussFits(:,6),GaussFits(:,7)],'Sheet1','A2'); % write data
             xlswrite([pathname, filename],Col_header,'Sheet1','A1')     %Write column header
         end
     elseif ext == '.mat'
@@ -1183,6 +1200,7 @@ set(handles.txtBackgroundInt,'enable','on');
 set(handles.lblFitMethod,'enable','on');
 set(handles.chFitMethod,'enable','on');
 set(handles.cmdResetBkint,'enable','on');
+set(handles.cmdOptimize,'enable','on');
 
 set(handles.lblHist,'enable','on');
 set(handles.txtHistCat,'enable','on');
@@ -1261,13 +1279,13 @@ hold on
 [vx,vy] = voronoi(peakx,peaky);
 plot(peakx,peaky,'r.',vx,vy,'k-');
 hold off
-axis square
-view(0,-90);
 colorbar
 xlabel('Scale [nm]');
 colormap default;
-ylim([min(xscale) max(xscale)]);
-xlim([min(yscale) max(yscale)]);
+axis equal
+ylim([min(yscale) max(yscale)]);
+xlim([min(xscale) max(xscale)]);
+%view(0,-90);
 
 ax = gca(); 
 pl2 = imagesc(xscale,yscale,Ifilt);
@@ -1277,13 +1295,13 @@ hold on
 pl1 = plot(peakx,peaky,'w+');
 hold off
 set(ax, 'YDir', 'normal')
-axis equal
 xlabel('Scale [nm]');
 colormap default;
 cb = colorbar; 
 caxis([minpeak cmax])
-ylim([min(xscale) max(xscale)]);
-xlim([min(yscale) max(yscale)]);
+axis equal
+ylim([min(yscale) max(yscale)]);
+xlim([min(xscale) max(xscale)]);
 ylabel(cb,'counts')
 
 set(pl1,'YDataSource','peaky','XDataSource','peakx')
@@ -1294,8 +1312,8 @@ while stop == false
     [px,py,key] = ginput(1)
     
     if key == 1 % left mouse button
-        if px>m*ps px=m*ps; end
-        if py>n*ps py=n*ps; end
+        if px>n*ps px=n*ps; end
+        if py>m*ps py=m*ps; end
         if px<1*ps px=ps; end
         if py<1*ps py=ps; end
 
@@ -1304,8 +1322,8 @@ while stop == false
         
     elseif key == 3 % right mouse button
         
-        if px>m*ps px=m*ps; end
-        if py>n*ps py=n*ps; end
+        if px>n*ps px=n*ps; end
+        if py>m*ps py=m*ps; end
         if px<1*ps px=ps; end
         if py<1*ps py=ps; end
 
@@ -1356,6 +1374,8 @@ hold(ax, 'off')
 set(gcf,'PaperPositionMode','auto')
 print('temp','-dpng','-r0')
 
+set(handles.cmdOptimize,'enable','on');
+
 
 % --- Executes on button press in cmdOptimize.
 function cmdOptimize_Callback(hObject, eventdata, handles)
@@ -1400,11 +1420,14 @@ choice = fitmethodch{get(handles.chFitMethod,'Value')};
 
 switch choice
    case 'Full'
-       [GaussFits,Iall,Ires,~] = Gauss2D(Iorg,oldpeakpxx,oldpeakpxy,LOC,BkgrdInt,minneighbourradius,'fit1');
-    case 'sig1=sig2'
-       [GaussFits,Iall,Ires,~] = Gauss2D(Iorg,oldpeakpxx,oldpeakpxy,LOC,BkgrdInt,minneighbourradius,'dont');
+       %[GaussFits,Iall,Ires,~,ResNorm] = Gauss2D(Iorg,oldpeakpxx,oldpeakpxy,LOC,BkgrdInt,minneighbourradius,'fit1');
+   case 'sig1=sig2'
+       %[GaussFits,Iall,Ires,~,ResNorm] = Gauss2D(Iorg,oldpeakpxx,oldpeakpxy,LOC,BkgrdInt,minneighbourradius,'dont');
+       [GaussFits,Iall,Ires,~,ResNorm] = Gauss2D_2(Iorg,oldpeakpxx,oldpeakpxy,LOC,BkgrdInt,minneighbourradius,'fit1');
 end
 % [GaussFits,Iall,Ires,~] = Gauss2D(imresize(Iorg,1/binningfactor),oldpeakpxx,oldpeakpxy,LOC,BkgrdInt,minneighbourradius);
+
+GaussFits = [GaussFits, ResNorm];   % add Squared norm of the residual to Fitting parameter list (sum((fun(x,xdata)-ydata).^2))
 
 peakpxx = zeros(size(GaussFits,1),1);
 peakpxx(peakpxx>0)=[];
@@ -1455,11 +1478,11 @@ imagesc(xscale,yscale,Iall);
 %scatter(GaussFits(:,2),GaussFits(:,4),20)
 hold on
 plot(peakx,peaky,'w+');
-plot(oldpeakx,oldpeaky,'ro');
+%plot(oldpeakx,oldpeaky,'ro');
 hold off
 axis equal
 colorbar
-set(ax, 'YDir', 'reverse')
+view(0,-90);
 
 figure;
 imagesc(xscale,yscale,Ires);
